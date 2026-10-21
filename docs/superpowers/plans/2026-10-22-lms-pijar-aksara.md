@@ -68,10 +68,10 @@ git commit -m "feat: inisialisasi proyek Next.js lms-pijar-aksara"
 **Interfaces:**
 - Produces: 9 tabel relasional (`profiles`, `kursus`, `modul`, `soal`, `pendaftaran`, `progres_modul`, `percobaan_kuis`, `sertifikat`, `audit_log`), enum status, aturan integritas foreign key, kebijakan RLS, serta konfigurasi bucket storage privat `modul-lampiran`.
 
-- [ ] **Step 1: Tulis berkas migrasi `01_schema.sql` untuk pembuatan tabel, enum, dan indeks relasional**
-- [ ] **Step 2: Tulis berkas migrasi `02_rls.sql` untuk seluruh kebijakan Row Level Security pada 9 tabel**
-- [ ] **Step 3: Tulis berkas migrasi `03_storage.sql` untuk konfigurasi bucket privat `modul-lampiran` dan kebijakan download/upload PDF**
-- [ ] **Step 4: Commit berkas migrasi**
+- [x] **Step 1: Tulis berkas migrasi `01_schema.sql` untuk pembuatan tabel, enum, dan indeks relasional**
+- [x] **Step 2: Tulis berkas migrasi `02_rls.sql` untuk seluruh kebijakan Row Level Security pada 9 tabel**
+- [x] **Step 3: Tulis berkas migrasi `03_storage.sql` untuk konfigurasi bucket privat `modul-lampiran` dan kebijakan download/upload PDF**
+- [x] **Step 4: Commit berkas migrasi**
 ```bash
 git add lms-pijar-aksara/supabase/migrations/
 git commit -m "feat(db): skrip migrasi skema tabel, RLS, dan storage Supabase"
