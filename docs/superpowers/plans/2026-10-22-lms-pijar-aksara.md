@@ -141,13 +141,13 @@ git commit -m "feat(seed): skrip seed data contoh dan akun uji dari Excel"
 **Interfaces:**
 - Produces: Client helper Supabase SSR, penanganan sesi pengguna, route protection 3 peran, dan header navigasi responsif dinamis.
 
-- [ ] **Step 1: Implementasikan helper Supabase SSR (`createBrowserClient`, `createServerClient`)**
-- [ ] **Step 2: Buat Next.js `middleware.ts` untuk route guarding dan penambahan header noindex pada halaman internal**
-- [ ] **Step 3: Buat `AuthContext` untuk membagikan status profil & peran pengguna**
-- [ ] **Step 4: Bangun UI halaman masuk di `/masuk` dan daftar akun di `/daftar`**
-- [ ] **Step 5: Bangun UI halaman `/akses-ditolak` (HTTP 403)**
-- [ ] **Step 6: Bangun komponen `Navbar` dengan menu kondisional sesuai peran (`tamu`, `peserta`, `instruktur`, `admin`)**
-- [ ] **Step 7: Commit implementasi otentikasi dan route guard**
+- [x] **Step 1: Implementasikan helper Supabase SSR (`createBrowserClient`, `createServerClient`)**
+- [x] **Step 2: Buat Next.js `middleware.ts` untuk route guarding dan penambahan header noindex pada halaman internal**
+- [x] **Step 3: Buat `AuthContext` untuk membagikan status profil & peran pengguna**
+- [x] **Step 4: Bangun UI halaman masuk di `/masuk` dan daftar akun di `/daftar`**
+- [x] **Step 5: Bangun UI halaman `/akses-ditolak` (HTTP 403)**
+- [x] **Step 6: Bangun komponen `Navbar` dengan menu kondisional sesuai peran (`tamu`, `peserta`, `instruktur`, `admin`)**
+- [x] **Step 7: Commit implementasi otentikasi dan route guard**
 ```bash
 git add lms-pijar-aksara/src/lib/ lms-pijar-aksara/src/middleware.ts lms-pijar-aksara/src/app/(auth)/ lms-pijar-aksara/src/components/layout/
 git commit -m "feat(auth): supabase auth, middleware route guard, dan halaman login/register"
