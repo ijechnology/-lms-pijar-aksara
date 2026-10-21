@@ -45,12 +45,12 @@
 **Interfaces:**
 - Produces: Basis aplikasi Next.js TypeScript dengan dependensi `@supabase/supabase-js`, `@supabase/ssr`, `lucide-react`, `recharts`, `clsx`, `tailwind-merge`.
 
-- [ ] **Step 1: Inisialisasi struktur Next.js di dalam folder `lms-pijar-aksara`**
-- [ ] **Step 2: Pasang dependensi utama (`@supabase/ssr`, `@supabase/supabase-js`, `lucide-react`, `recharts`)**
-- [ ] **Step 3: Konfigurasi Tailwind CSS dan tokens tema Pijar Aksara**
-- [ ] **Step 4: Buat berkas `.env.local.example` berisi variabel kredensial Supabase & Mayar**
-- [ ] **Step 5: Verifikasi build Next.js (`npm run build`) berjalan sukses**
-- [ ] **Step 6: Commit perubahan**
+- [x] **Step 1: Inisialisasi struktur Next.js di dalam folder `lms-pijar-aksara`**
+- [x] **Step 2: Pasang dependensi utama (`@supabase/ssr`, `@supabase/supabase-js`, `lucide-react`, `recharts`)**
+- [x] **Step 3: Konfigurasi Tailwind CSS dan tokens tema Pijar Aksara**
+- [x] **Step 4: Buat berkas `.env.local.example` berisi variabel kredensial Supabase & Mayar**
+- [x] **Step 5: Verifikasi build Next.js (`npm run build`) berjalan sukses**
+- [x] **Step 6: Commit perubahan**
 ```bash
 git add lms-pijar-aksara/
 git commit -m "feat: inisialisasi proyek Next.js lms-pijar-aksara"
