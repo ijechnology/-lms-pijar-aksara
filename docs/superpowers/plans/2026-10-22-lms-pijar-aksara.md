@@ -114,10 +114,10 @@ git commit -m "feat(db): fungsi database atomik RPC daftar, kuis, moderasi, dan 
 - Consumes: `docs-lms/Data_Contoh_LMS.xlsx`
 - Produces: Skrip seeding terurut yang mengisi 35 akun Auth & profiles, 7 kursus, 18 modul, 70 soal, 61 pendaftaran, progres, kuis, sertifikat, dan audit log dengan kasus batas utuh.
 
-- [ ] **Step 1: Buat skrip pembaca Excel yang mengekstrak data dari `docs-lms/Data_Contoh_LMS.xlsx`**
-- [ ] **Step 2: Tulis skrip pembuat pengguna Supabase Auth dan sinkronisasi ID ke tabel `profiles`**
-- [ ] **Step 3: Hasilkan berkas `supabase/seed.sql` dengan urutan impor sesuai aturan PRD**
-- [ ] **Step 4: Commit skrip dan berkas seed**
+- [x] **Step 1: Buat skrip pembaca Excel yang mengekstrak data dari `docs-lms/Data_Contoh_LMS.xlsx`**
+- [x] **Step 2: Tulis skrip pembuat pengguna Supabase Auth dan sinkronisasi ID ke tabel `profiles`**
+- [x] **Step 3: Hasilkan berkas `supabase/seed.sql` dengan urutan impor sesuai aturan PRD**
+- [x] **Step 4: Commit skrip dan berkas seed**
 ```bash
 git add lms-pijar-aksara/scripts/ lms-pijar-aksara/supabase/seed.sql
 git commit -m "feat(seed): skrip seed data contoh dan akun uji dari Excel"
