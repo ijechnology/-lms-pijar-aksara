@@ -92,11 +92,11 @@ git commit -m "feat(db): skrip migrasi skema tabel, RLS, dan storage Supabase"
   - `putuskan_tinjauan_kursus(p_kursus_id uuid, p_keputusan text, p_catatan text) -> jsonb`
   - `konfirmasi_pembayaran_manual(p_pendaftaran_id uuid) -> jsonb`
 
-- [ ] **Step 1: Tulis implementasi RPC `daftar_kursus` dengan `FOR UPDATE` dan validasi kuota**
-- [ ] **Step 2: Tulis implementasi RPC `kirim_jawaban_kuis` dengan evaluasi nilai rahasia dan penerbitan sertifikat otomatis**
-- [ ] **Step 3: Tulis implementasi RPC `ajukan_kursus` dan `putuskan_tinjauan_kursus` dengan audit log**
-- [ ] **Step 4: Tulis implementasi RPC `konfirmasi_pembayaran_manual`**
-- [ ] **Step 5: Commit berkas fungsi SQL**
+- [x] **Step 1: Tulis implementasi RPC `daftar_kursus` dengan `FOR UPDATE` dan validasi kuota**
+- [x] **Step 2: Tulis implementasi RPC `kirim_jawaban_kuis` dengan evaluasi nilai rahasia dan penerbitan sertifikat otomatis**
+- [x] **Step 3: Tulis implementasi RPC `ajukan_kursus` dan `putuskan_tinjauan_kursus` dengan audit log**
+- [x] **Step 4: Tulis implementasi RPC `konfirmasi_pembayaran_manual`**
+- [x] **Step 5: Commit berkas fungsi SQL**
 ```bash
 git add lms-pijar-aksara/supabase/migrations/04_functions.sql
 git commit -m "feat(db): fungsi database atomik RPC daftar, kuis, moderasi, dan bayar"
