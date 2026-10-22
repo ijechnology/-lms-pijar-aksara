@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
 import { useAuth } from "@/context/AuthContext";
@@ -46,54 +46,54 @@ export default function KursusSayaPage() {
   const [loadingData, setLoadingData] = useState(true);
   const [cancelingId, setCancelingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function loadData() {
-      if (!user) return;
-      setLoadingData(true);
-      try {
-        const { data, error } = await supabase
-          .from("pendaftaran")
-          .select(`
-            id, kursus_id, status, nominal, metode_bayar, batas_bayar, didaftarkan_pada,
-            kursus:kursus_id (id, judul, slug, kategori, nilai_lulus, modul (id)),
-            sertifikat (nomor_sertifikat),
-            progres_modul (id, lulus_pada)
-          `)
-          .eq("peserta_id", user.id)
-          .order("didaftarkan_pada", { ascending: false });
+  const loadData = useCallback(async () => {
+    if (!user) return;
+    setLoadingData(true);
+    try {
+      const { data, error } = await supabase
+        .from("pendaftaran")
+        .select(`
+          id, kursus_id, status, nominal, metode_bayar, batas_bayar, didaftarkan_pada,
+          kursus:kursus_id (id, judul, slug, kategori, nilai_lulus, modul (id)),
+          sertifikat (nomor_sertifikat),
+          progres_modul (id, lulus_pada)
+        `)
+        .eq("peserta_id", user.id)
+        .order("didaftarkan_pada", { ascending: false });
 
-        if (!error && data) {
-          const formatted: PendaftaranItem[] = data.map((item: any) => {
-            const totalModul = item.kursus?.modul?.length || 0;
-            const modulLulus = (item.progres_modul || []).filter(
-              (p: any) => p.lulus_pada !== null
-            ).length;
+      if (!error && data) {
+        const formatted: PendaftaranItem[] = data.map((item: any) => {
+          const totalModul = item.kursus?.modul?.length || 0;
+          const modulLulus = (item.progres_modul || []).filter(
+            (p: any) => p.lulus_pada !== null
+          ).length;
 
-            return {
-              id: item.id,
-              kursus_id: item.kursus_id,
-              status: item.status,
-              nominal: item.nominal,
-              metode_bayar: item.metode_bayar,
-              batas_bayar: item.batas_bayar,
-              didaftarkan_pada: item.didaftarkan_pada,
-              kursus: item.kursus,
-              total_modul: totalModul,
-              modul_lulus: modulLulus,
-              sertifikat: item.sertifikat?.[0] || null,
-            };
-          });
-          setPendaftaranList(formatted);
-        }
-      } catch (err) {
-        console.error("Gagal memuat kursus saya:", err);
-      } finally {
-        setLoadingData(false);
+          return {
+            id: item.id,
+            kursus_id: item.kursus_id,
+            status: item.status,
+            nominal: item.nominal,
+            metode_bayar: item.metode_bayar,
+            batas_bayar: item.batas_bayar,
+            didaftarkan_pada: item.didaftarkan_pada,
+            kursus: item.kursus,
+            total_modul: totalModul,
+            modul_lulus: modulLulus,
+            sertifikat: item.sertifikat?.[0] || null,
+          };
+        });
+        setPendaftaranList(formatted);
       }
+    } catch (err) {
+      console.error("Gagal memuat kursus saya:", err);
+    } finally {
+      setLoadingData(false);
     }
-
-    loadData();
   }, [user, supabase]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const handleBatalPendaftaran = async (pendaftaranId: string) => {
     if (!confirm("Apakah Anda yakin ingin membatalkan pendaftaran yang belum dibayar ini?")) {
@@ -124,6 +124,34 @@ export default function KursusSayaPage() {
       console.error("Gagal batalkan pendaftaran:", err);
     } finally {
       setCancelingId(null);
+    }
+  };
+
+  const [payingId, setPayingId] = useState<string | null>(null);
+
+  const handleBayar = async (pendaftaranId: string) => {
+    setPayingId(pendaftaranId);
+    try {
+      const response = await fetch("/api/pembayaran/mayar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pendaftaran_id: pendaftaranId }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Gagal memproses pembayaran.");
+      }
+
+      if (data.paymentUrl) {
+        window.location.href = data.paymentUrl;
+      } else if (data.alreadyActive) {
+        alert(data.message || "Pendaftaran sudah aktif!");
+        loadData();
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Terjadi kesalahan pembayaran.");
+    } finally {
+      setPayingId(null);
     }
   };
 
@@ -316,12 +344,13 @@ export default function KursusSayaPage() {
                         >
                           {cancelingId === item.id ? "Membatalkan..." : "Batalkan"}
                         </button>
-                        <Link
-                          href={`/kursus/${item.kursus?.slug}`}
-                          className="flex-1 text-center py-2 px-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-sm transition"
+                        <button
+                          onClick={() => handleBayar(item.id)}
+                          disabled={payingId === item.id}
+                          className="flex-1 text-center py-2 px-3 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:bg-slate-300 text-white text-xs font-bold shadow-sm transition"
                         >
-                          Bayar
-                        </Link>
+                          {payingId === item.id ? "Memproses..." : "Bayar Sekarang"}
+                        </button>
                       </div>
                     )}
 
