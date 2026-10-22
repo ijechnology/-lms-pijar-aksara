@@ -193,14 +193,14 @@ git commit -m "feat(public): katalog kursus publik, detail kursus, dan sitemap d
 **Interfaces:**
 - Produces: Dasbor kursus peserta, ruang belajar navigasi bertahap, sematan video YouTube, unduh PDF via signed URL (60 menit), kuis pilihan ganda aman, dan halaman sertifikat cetak `@media print`.
 
-- [ ] **Step 1: Bangun halaman `/kursus-saya` dengan daftar kursus, status bayar, progres %, dan tombol aksi**
-- [ ] **Step 2: Bangun komponen `SidebarModul` dengan status modul (lulus, sedang dipelajari, terkunci)**
-- [ ] **Step 3: Bangun komponen baca materi, sematan video, tombol tanda baca materi, dan tombol unduh PDF privat via signed URL**
-- [ ] **Step 4: Bangun komponen `FormKuis` (pilihan A–D, tombol kirim anti-dobel, riwayat percobaan, sisa kuota, evaluasi via RPC `kirim_jawaban_kuis`)**
-- [ ] **Step 5: Bangun halaman sertifikat `/sertifikat` berformat `PA-TAHUN-NOMOR` dengan styling cetak `@media print`**
-- [ ] **Step 6: Commit fitur ruang belajar dan sertifikat**
+- [x] **Step 1: Bangun halaman `/kursus-saya` dengan daftar kursus, status bayar, progres %, dan tombol aksi**
+- [x] **Step 2: Bangun komponen `SidebarModul` dengan status modul (lulus, sedang dipelajari, terkunci)**
+- [x] **Step 3: Bangun komponen baca materi, sematan video, tombol tanda baca materi, dan tombol unduh PDF privat via signed URL**
+- [x] **Step 4: Bangun komponen `FormKuis` (pilihan A–D, tombol kirim anti-dobel, riwayat percobaan, sisa kuota, evaluasi via RPC `kirim_jawaban_kuis`)**
+- [x] **Step 5: Bangun halaman sertifikat `/sertifikat` berformat `PA-TAHUN-NOMOR` dengan styling cetak `@media print`**
+- [x] **Step 6: Commit fitur ruang belajar dan sertifikat**
 ```bash
-git add lms-pijar-aksara/src/app/(peserta)/ lms-pijar-aksara/src/components/peserta/
+git add "lms-pijar-aksara/src/app/(peserta)/" lms-pijar-aksara/src/components/peserta/
 git commit -m "feat(peserta): ruang belajar modul, kuis server-side, dan cetak sertifikat"
 ```
 
