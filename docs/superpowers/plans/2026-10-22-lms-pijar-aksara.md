@@ -167,14 +167,14 @@ git commit -m "feat(auth): supabase auth, middleware route guard, dan halaman lo
 **Interfaces:**
 - Produces: Katalog kursus terbit publik, filter kategori & pencarian via URL search params, detail kursus SSR dengan metadata dinamis, dan sitemap dinamis (`/sitemap.xml`).
 
-- [ ] **Step 1: Bangun komponen `KursusCard` dan `KursusFilter` dengan tampilan sisa kursi dan status harga**
-- [ ] **Step 2: Bangun halaman katalog publik di `/` dengan SSR, kalkulasi kuota, dan LCP $\le$ 2.5s**
-- [ ] **Step 3: Bangun halaman detail kursus `/kursus/[slug]` dengan silabus modul, tombol daftar, dan fallback HTTP 404 jika non-terbit**
-- [ ] **Step 4: Tambahkan `generateMetadata` dinamis untuk SEO per kursus**
-- [ ] **Step 5: Buat rute sitemap `/sitemap.xml` yang hanya mengekspor kursus berstatus `terbit`**
-- [ ] **Step 6: Commit fitur halaman publik dan SEO**
+- [x] **Step 1: Bangun komponen `KursusCard` dan `KursusFilter` dengan tampilan sisa kursi dan status harga**
+- [x] **Step 2: Bangun halaman katalog publik di `/` dengan SSR, kalkulasi kuota, dan LCP $\le$ 2.5s**
+- [x] **Step 3: Bangun halaman detail kursus `/kursus/[slug]` dengan silabus modul, tombol daftar, dan fallback HTTP 404 jika non-terbit**
+- [x] **Step 4: Tambahkan `generateMetadata` dinamis untuk SEO per kursus**
+- [x] **Step 5: Buat rute sitemap `/sitemap.xml` yang hanya mengekspor kursus berstatus `terbit`**
+- [x] **Step 6: Commit fitur halaman publik dan SEO**
 ```bash
-git add lms-pijar-aksara/src/app/(public)/ lms-pijar-aksara/src/components/kursus/ lms-pijar-aksara/src/app/sitemap.ts
+git add lms-pijar-aksara/src/app/page.tsx lms-pijar-aksara/src/app/kursus/ lms-pijar-aksara/src/components/kursus/ lms-pijar-aksara/src/app/sitemap.ts
 git commit -m "feat(public): katalog kursus publik, detail kursus, dan sitemap dinamis"
 ```
 
