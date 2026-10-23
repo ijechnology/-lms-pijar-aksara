@@ -30,7 +30,14 @@ function LoginForm() {
       });
 
       if (error) {
-        setErrorMsg("Email atau kata sandi tidak cocok. Silakan periksa kembali.");
+        const errLower = error.message.toLowerCase();
+        if (errLower.includes("email not confirmed")) {
+          setErrorMsg("Email Anda belum dikonfirmasi. Silakan periksa tautan konfirmasi di inbox atau spam email Anda.");
+        } else if (errLower.includes("invalid login credentials")) {
+          setErrorMsg("Email atau kata sandi tidak cocok. Silakan periksa kembali.");
+        } else {
+          setErrorMsg(error.message || "Email atau kata sandi tidak cocok. Silakan periksa kembali.");
+        }
         setLoading(false);
         return;
       }

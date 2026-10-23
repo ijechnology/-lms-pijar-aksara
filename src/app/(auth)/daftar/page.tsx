@@ -80,10 +80,18 @@ export default function RegisterPage() {
           aktif: true,
         });
 
+        // Jika belum ada session otomatis dari signUp, lakukan signIn langsung
+        if (!data.session) {
+          await supabase.auth.signInWithPassword({
+            email: email.trim().toLowerCase(),
+            password,
+          });
+        }
+
         setSuccessMsg("Pendaftaran berhasil! Mengalihkan ke ruang belajar...");
         setTimeout(() => {
           router.push("/kursus-saya");
-        }, 1500);
+        }, 1200);
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Terjadi kesalahan saat pendaftaran.";
