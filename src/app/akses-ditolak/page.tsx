@@ -1,24 +1,30 @@
 "use client";
 
-import React, { Suspense } from "react";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { ShieldX, ArrowLeft, Home, UserCheck } from "lucide-react";
+import React, { useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ShieldX, LogIn } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { createClient } from "@/lib/supabase/client";
 
 function AksesDitolakContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const alasan = searchParams.get("alasan");
-  const { role, user } = useAuth();
+  const { role, user, signOut } = useAuth();
+  const [loggingOut, setLoggingOut] = useState(false);
+  const supabase = createClient();
 
-  const getDashboardLink = () => {
-    if (role === "admin") return { href: "/admin/dashboard", label: "Dasbor Admin" };
-    if (role === "instruktur") return { href: "/instruktur/kursus", label: "Kelola Kursus" };
-    if (role === "peserta") return { href: "/kursus-saya", label: "Kursus Saya" };
-    return { href: "/", label: "Beranda Katalog" };
+  const handleKeHalamanLogin = async () => {
+    setLoggingOut(true);
+    try {
+      await signOut();
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error("Gagal logout:", err);
+    } finally {
+      router.push("/masuk");
+    }
   };
-
-  const dashLink = getDashboardLink();
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
@@ -46,7 +52,8 @@ function AksesDitolakContent() {
         {user && (
           <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-1">
             <p>
-              Login sebagai: <span className="font-semibold text-slate-800">{user.email}</span>
+              Login sebagai:{" "}
+              <span className="font-semibold text-slate-800">{user.email}</span>
             </p>
             <p>
               Peran aktif:{" "}
@@ -57,19 +64,19 @@ function AksesDitolakContent() {
           </div>
         )}
 
-        <div className="pt-2 flex flex-col sm:flex-row gap-2.5 justify-center">
-          <Link
-            href="/"
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition"
+        <div className="pt-2">
+          <button
+            onClick={handleKeHalamanLogin}
+            disabled={loggingOut}
+            className="w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 shadow-md shadow-brand-500/20 transition disabled:opacity-60 cursor-pointer"
           >
-            <Home className="w-4 h-4" /> Beranda
-          </Link>
-          <Link
-            href={dashLink.href}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 shadow-md shadow-brand-500/20 transition"
-          >
-            <UserCheck className="w-4 h-4" /> Buka {dashLink.label}
-          </Link>
+            {loggingOut ? (
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              <LogIn className="w-4 h-4" />
+            )}
+            <span>Kembali ke Halaman Masuk</span>
+          </button>
         </div>
       </div>
     </div>

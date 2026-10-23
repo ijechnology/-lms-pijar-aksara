@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { Printer, ArrowLeft, Info } from "lucide-react";
+import { Printer, ArrowLeft } from "lucide-react";
 
 export interface SertifikatData {
   nomor_sertifikat: string;
@@ -57,13 +57,6 @@ export default function SertifikatView({
         </div>
       </div>
 
-      {/* Petunjuk Pengunduhan PDF Resmi (Hanya di Layar) */}
-      <div className="no-print bg-blue-50/80 border border-blue-200 rounded-xl p-3.5 text-xs text-blue-900 flex items-start gap-2.5 shadow-2xs">
-        <Info className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
-        <div className="leading-relaxed">
-          <span className="font-bold">Tips Unduh PDF Rapi:</span> Di jendela cetak browser, pastikan pilih <strong>Tujuan: Simpan sebagai PDF (Save as PDF)</strong>, <strong>Tata Letak: Lanskap (Landscape)</strong>, dan centang opsi <strong>Grafik latar belakang (Background graphics)</strong> agar stempel dan bingkai emas tampil sempurna tanpa terpotong.
-        </div>
-      </div>
 
       {/* Kontainer Lembar Sertifikat A4 Landscape Proporsional */}
       <div className="certificate-page-wrapper w-full overflow-x-auto py-2 print:p-0 print:m-0">
