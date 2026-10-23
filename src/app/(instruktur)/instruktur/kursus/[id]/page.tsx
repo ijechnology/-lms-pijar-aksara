@@ -8,6 +8,7 @@ import EditorModul, { ModulData } from "@/components/instruktur/EditorModul";
 import EditorSoal from "@/components/instruktur/EditorSoal";
 import { useAuth } from "@/context/AuthContext";
 import { createClient } from "@/lib/supabase/client";
+import ConfirmModal from "@/components/ui/ConfirmModal";
 import {
   ArrowLeft,
   BookOpen,
@@ -22,6 +23,10 @@ import {
   Info,
   Clock,
   Award,
+  Video,
+  Download,
+  FileText,
+  Eye,
 } from "lucide-react";
 
 interface KursusDetail {
@@ -53,6 +58,42 @@ export default function DetailKurikulumInstrukturPage() {
   const [selectedModul, setSelectedModul] = useState<ModulData | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Tab & Media Viewer
+  const [activeTab, setActiveTab] = useState<"materi" | "soal">("materi");
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+
+  // Helper unduh PDF via Signed URL (BR-08)
+  const handleUnduhPdf = async (path: string | null) => {
+    if (!path) return;
+    setDownloadingPdf(true);
+    try {
+      const { data, error } = await supabase.storage
+        .from("modul-lampiran")
+        .createSignedUrl(path, 3600);
+      if (error || !data?.signedUrl) {
+        alert("Gagal membuka file PDF: " + (error?.message || "File belum diunggah atau tidak ditemukan."));
+      } else {
+        window.open(data.signedUrl, "_blank");
+      }
+    } catch (err) {
+      console.error("Gagal unduh PDF:", err);
+      alert("Terjadi kesalahan saat memuat berkas PDF.");
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
+  // Format link YouTube ke embed
+  const getEmbedUrl = (url: string | null) => {
+    if (!url) return null;
+    if (url.includes("youtube.com/embed/")) return url;
+    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{6,15})/);
+    if (match) {
+      return `https://www.youtube.com/embed/${match[1]}?rel=0&enablejsapi=1`;
+    }
+    return url;
+  };
 
   // Ajukan review
   const [submitting, setSubmitting] = useState(false);
@@ -136,7 +177,7 @@ export default function DetailKurikulumInstrukturPage() {
     }
   }, [isLoading, user, loadData, router]);
 
-  const isLocked = kursus?.status !== "draf";
+  const isLocked = role === "admin" || kursus?.status !== "draf";
 
   // Validasi kurikulum BR-03: 2-10 modul, 3-20 soal per modul
   const totalModul = modulList.length;
@@ -146,7 +187,9 @@ export default function DetailKurikulumInstrukturPage() {
   );
   const isCurriculumValid = isModulCountValid && invalidModulSoal.length === 0;
 
-  const handleAjukanReview = async () => {
+  const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
+
+  const handleAjukanReview = () => {
     if (!kursus || isLocked) return;
 
     if (!isCurriculumValid) {
@@ -166,10 +209,11 @@ export default function DetailKurikulumInstrukturPage() {
       return;
     }
 
-    const confirmSubmit = window.confirm(
-      "Apakah Anda yakin ingin mengajukan kursus ini untuk ditinjau oleh Admin? Setelah diajukan, kurikulum akan terkunci dari pengeditan."
-    );
-    if (!confirmSubmit) return;
+    setConfirmSubmitOpen(true);
+  };
+
+  const executeAjukanReview = async () => {
+    if (!kursus) return;
 
     setSubmitting(true);
     setSubmitFeedback(null);
@@ -189,6 +233,7 @@ export default function DetailKurikulumInstrukturPage() {
           "Kursus berhasil diajukan untuk ditinjau oleh Admin! Status kursus kini 'Ditinjau'.",
       });
 
+      setConfirmSubmitOpen(false);
       // Muat ulang data kursus
       await loadData();
     } catch (err) {
@@ -255,10 +300,10 @@ export default function DetailKurikulumInstrukturPage() {
           <h1 className="text-2xl font-bold text-slate-900 mb-2">Terjadi Kesalahan</h1>
           <p className="text-slate-600 mb-6">{errorMsg || "Kursus tidak ditemukan."}</p>
           <Link
-            href="/instruktur/kursus"
+            href={role === "admin" ? "/admin" : "/instruktur/kursus"}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 transition"
           >
-            <ArrowLeft className="w-4 h-4" /> Kembali ke Daftar Kursus
+            <ArrowLeft className="w-4 h-4" /> {role === "admin" ? "Kembali ke Panel Admin" : "Kembali ke Daftar Kursus"}
           </Link>
         </div>
       </div>
@@ -270,22 +315,38 @@ export default function DetailKurikulumInstrukturPage() {
       <Navbar />
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-        {/* Navigasi Atas */}
+        {/* Navigasi Atas & Breadcrumb */}
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Link
-              href="/instruktur/kursus"
+              href={role === "admin" ? "/admin" : "/instruktur/kursus"}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 text-xs font-semibold transition"
             >
-              <ArrowLeft className="w-4 h-4" /> Daftar Kursus
+              <ArrowLeft className="w-4 h-4" />
+              {role === "admin" ? "Kembali ke Panel Admin" : "Kembali ke Daftar Kursus"}
             </Link>
-            <div className="h-4 w-px bg-slate-300" />
-            <span className="text-xs font-medium text-slate-500">Editor Kurikulum</span>
+            <div className="h-4 w-px bg-slate-300 hidden sm:block" />
+            <nav className="hidden sm:flex items-center gap-2 text-xs text-slate-500 font-medium">
+              <Link
+                href={role === "admin" ? "/admin" : "/instruktur/kursus"}
+                className="hover:text-brand-600 transition"
+              >
+                {role === "admin" ? "Panel Admin" : "Daftar Kursus"}
+              </Link>
+              <span>/</span>
+              <span className="text-slate-800 font-semibold truncate max-w-[200px]">
+                {kursus.judul}
+              </span>
+              <span>/</span>
+              <span>
+                {role === "admin" ? "Inspeksi Kurikulum" : "Editor Kurikulum"}
+              </span>
+            </nav>
           </div>
 
           <div className="flex items-center gap-2">
             <Link
-              href={`/instruktur/kursus/${kursus.id}/peserta`}
+              href={`/instruktur/kursus/${kursus.id}/peserta${role === "admin" ? "?from=admin" : ""}`}
               className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg border border-brand-200 bg-brand-50 text-brand-700 hover:bg-brand-100 text-xs font-bold transition"
             >
               <Users className="w-4 h-4" /> Rekap Nilai Peserta
@@ -322,28 +383,30 @@ export default function DetailKurikulumInstrukturPage() {
               <p className="text-sm text-slate-600 line-clamp-2">{kursus.ringkasan}</p>
             </div>
 
-            {/* Aksi Ajukan Kursus */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-              {kursus.status === "draf" ? (
-                <button
-                  onClick={handleAjukanReview}
-                  disabled={submitting}
-                  className={`inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-bold text-sm shadow-md transition ${
-                    isCurriculumValid
-                      ? "bg-brand-600 hover:bg-brand-700 text-white shadow-brand-500/20"
-                      : "bg-slate-200 text-slate-500 cursor-not-allowed"
-                  }`}
-                >
-                  <Send className="w-4 h-4" />
-                  {submitting ? "Memproses..." : "Ajukan Kursus ke Admin"}
-                </button>
-              ) : (
-                <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200">
-                  <Lock className="w-4 h-4 text-slate-500" />
-                  Kurikulum Terkunci ({kursus.status.toUpperCase()})
-                </div>
-              )}
-            </div>
+            {/* Aksi Ajukan Kursus untuk Instruktur (Dihapus dari header untuk Admin sesuai permintaan) */}
+            {role !== "admin" && (
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                {kursus.status === "draf" ? (
+                  <button
+                    onClick={handleAjukanReview}
+                    disabled={submitting}
+                    className={`inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-bold text-sm shadow-md transition ${
+                      isCurriculumValid
+                        ? "bg-brand-600 hover:bg-brand-700 text-white shadow-brand-500/20"
+                        : "bg-slate-200 text-slate-500 cursor-not-allowed"
+                    }`}
+                  >
+                    <Send className="w-4 h-4" />
+                    {submitting ? "Memproses..." : "Ajukan Kursus ke Admin"}
+                  </button>
+                ) : (
+                  <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200">
+                    <Lock className="w-4 h-4 text-slate-500" />
+                    Kurikulum Terkunci ({kursus.status.toUpperCase()})
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Feedback Notifikasi */}
@@ -439,42 +502,182 @@ export default function DetailKurikulumInstrukturPage() {
             </div>
           </div>
 
-          {/* Kolom Kanan: Editor Butir Soal untuk Modul Terpilih (7 kolom) */}
+          {/* Kolom Kanan: Detail Materi, Media & Editor Soal (7 kolom) */}
           <div className="lg:col-span-7 space-y-6">
-            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-sm">
               {selectedModul ? (
                 <>
-                  <div className="border-b border-slate-200 pb-4 mb-5">
-                    <span className="text-xs font-bold text-brand-600 uppercase tracking-wider">
-                      Modul {selectedModul.urutan}
-                    </span>
-                    <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2 mt-0.5">
-                      <HelpCircle className="w-5 h-5 text-brand-600" />
-                      Butir Soal Kuis: {selectedModul.judul}
-                    </h2>
-                    <p className="text-xs text-slate-500 mt-1">
-                      Kunci jawaban tersimpan terisolasi di sisi server (INV-05) dan tidak akan
-                      pernah dibocorkan ke peserta.
-                    </p>
+                  {/* Header Modul Terpilih */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-4 mb-5">
+                    <div>
+                      <span className="text-xs font-bold text-brand-600 uppercase tracking-wider">
+                        Modul {selectedModul.urutan}
+                      </span>
+                      <h2 className="text-lg font-bold text-slate-900 mt-0.5">
+                        {selectedModul.judul}
+                      </h2>
+                      <div className="flex items-center gap-3 text-xs text-slate-500 mt-1">
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3.5 h-3.5 text-slate-400" /> {selectedModul.durasi_menit} Menit
+                        </span>
+                        <span>·</span>
+                        <span>{selectedModul.soal_count ?? 0} Butir Soal Kuis</span>
+                      </div>
+                    </div>
+
+                    {/* Tab Switcher */}
+                    <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl self-start sm:self-center">
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab("materi")}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                          activeTab === "materi"
+                            ? "bg-white text-brand-700 shadow-xs"
+                            : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        <FileText className="w-3.5 h-3.5" />
+                        Materi &amp; Media
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab("soal")}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                          activeTab === "soal"
+                            ? "bg-white text-brand-700 shadow-xs"
+                            : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        <HelpCircle className="w-3.5 h-3.5" />
+                        Soal Kuis ({selectedModul.soal_count ?? 0})
+                      </button>
+                    </div>
                   </div>
 
-                  <EditorSoal
-                    modulId={selectedModul.id}
-                    modulJudul={selectedModul.judul}
-                    isLocked={isLocked}
-                    onSoalCountChanged={loadData}
-                  />
+                  {/* Konten Tab 1: Materi, Video & PDF */}
+                  {activeTab === "materi" && (
+                    <div className="space-y-6">
+                      {/* Video Player */}
+                      {selectedModul.video_url ? (
+                        <div className="space-y-2">
+                          <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                            <Video className="w-4 h-4 text-blue-600" /> Video Pembelajaran
+                          </h4>
+                          <div className="aspect-video w-full rounded-2xl overflow-hidden shadow-md bg-slate-900 relative">
+                            <iframe
+                              src={getEmbedUrl(selectedModul.video_url)!}
+                              title={selectedModul.judul}
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                              allowFullScreen
+                              referrerPolicy="strict-origin-when-cross-origin"
+                              className="w-full h-full border-0"
+                            />
+                          </div>
+                          <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
+                            <span className="truncate max-w-sm">{selectedModul.video_url}</span>
+                            <a
+                              href={selectedModul.video_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-brand-600 hover:text-brand-700 font-semibold inline-flex items-center gap-1 hover:underline flex-shrink-0"
+                            >
+                              Buka di YouTube <ExternalLink className="w-3.5 h-3.5" />
+                            </a>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="p-4 rounded-xl border border-dashed border-slate-200 bg-slate-50 text-xs text-slate-500 flex items-center gap-2.5">
+                          <Video className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                          <span>Modul ini belum menyertakan tautan video pembelajaran.</span>
+                        </div>
+                      )}
+
+                      {/* Berkas Lampiran PDF */}
+                      {selectedModul.lampiran_path ? (
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-blue-50/70 border border-blue-200">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center flex-shrink-0">
+                              <Download className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-slate-900">
+                                Berkas Lampiran Materi (PDF)
+                              </p>
+                              <p className="text-xs text-slate-500 truncate max-w-xs">
+                                {selectedModul.lampiran_path.split("/").pop()}
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleUnduhPdf(selectedModul.lampiran_path)}
+                            disabled={downloadingPdf}
+                            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-brand-600 text-white font-bold text-xs hover:bg-brand-700 transition self-start sm:self-auto disabled:opacity-50"
+                          >
+                            <Download className="w-4 h-4" />
+                            {downloadingPdf ? "Membuka PDF..." : "Buka / Unduh PDF"}
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="p-4 rounded-xl border border-dashed border-slate-200 bg-slate-50 text-xs text-slate-500 flex items-center gap-2.5">
+                          <FileText className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                          <span>Modul ini tidak memiliki berkas lampiran PDF.</span>
+                        </div>
+                      )}
+
+                      {/* Bacaan Materi Lengkap */}
+                      <div className="space-y-2 pt-2">
+                        <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                          <FileText className="w-4 h-4 text-brand-600" /> Materi Bacaan Lengkap
+                        </h4>
+                        <div className="text-slate-800 text-sm sm:text-base leading-relaxed whitespace-pre-line bg-slate-50/70 p-5 sm:p-6 rounded-2xl border border-slate-200 font-sans">
+                          {selectedModul.isi_materi ? (
+                            selectedModul.isi_materi
+                          ) : (
+                            <span className="text-slate-400 italic">Belum ada teks materi bacaan pada modul ini.</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Konten Tab 2: Butir Soal Kuis */}
+                  {activeTab === "soal" && (
+                    <div className="space-y-4">
+                      <p className="text-xs text-slate-500">
+                        Kunci jawaban tersimpan terisolasi di sisi server (INV-05) dan tidak akan
+                        pernah dibocorkan ke peserta.
+                      </p>
+                      <EditorSoal
+                        modulId={selectedModul.id}
+                        modulJudul={selectedModul.judul}
+                        isLocked={isLocked}
+                        onSoalCountChanged={loadData}
+                      />
+                    </div>
+                  )}
                 </>
               ) : (
                 <div className="py-16 text-center text-slate-400">
                   <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-40 text-slate-400" />
-                  <p className="text-sm font-medium">Pilih modul di sebelah kiri untuk mengelola butir soal kuis.</p>
+                  <p className="text-sm font-medium">Pilih modul di sebelah kiri untuk melihat materi dan butir soal kuis.</p>
                 </div>
               )}
             </div>
           </div>
         </div>
       </main>
+      {/* Modal Konfirmasi Pengajuan Kurikulum */}
+      <ConfirmModal
+        isOpen={confirmSubmitOpen}
+        onClose={() => setConfirmSubmitOpen(false)}
+        onConfirm={executeAjukanReview}
+        title="Ajukan Kursus untuk Ditinjau?"
+        message="Apakah Anda yakin ingin mengajukan kursus ini untuk ditinjau oleh Admin? Setelah diajukan, kurikulum akan terkunci dari pengeditan hingga hasil review keluar."
+        confirmLabel="Ya, Ajukan Review"
+        cancelLabel="Batal"
+        variant="primary"
+        loading={submitting}
+      />
     </div>
   );
 }

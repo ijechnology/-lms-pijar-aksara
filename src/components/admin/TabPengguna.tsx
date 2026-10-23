@@ -3,6 +3,9 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import ConfirmModal from "@/components/ui/ConfirmModal";
+import AlertModal from "@/components/ui/AlertModal";
+import Pagination from "@/components/ui/Pagination";
 import {
   Users,
   Search,
@@ -21,8 +24,8 @@ interface PenggunaItem {
   nama_lengkap: string;
   email: string;
   no_hp: string | null;
-  role: "peserta" | "instruktur" | "admin";
-  is_active: boolean;
+  peran: "peserta" | "instruktur" | "admin";
+  aktif: boolean;
   dibuat_pada: string;
 }
 
@@ -34,9 +37,34 @@ export default function TabPengguna() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("semua");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  // Modal Dialogs
+  const [confirmRoleModal, setConfirmRoleModal] = useState<{
+    user: PenggunaItem;
+    newRole: "peserta" | "instruktur" | "admin";
+  } | null>(null);
+
+  const [confirmStatusModal, setConfirmStatusModal] = useState<{
+    user: PenggunaItem;
+    newStatus: boolean;
+  } | null>(null);
+
+  const [alertModal, setAlertModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: "info" | "error" | "success";
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "info",
+  });
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
@@ -44,7 +72,7 @@ export default function TabPengguna() {
     try {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, nama_lengkap, email, no_hp, role, is_active, dibuat_pada")
+        .select("id, nama_lengkap, email, no_hp, peran, aktif, dibuat_pada")
         .order("dibuat_pada", { ascending: false });
 
       if (error) throw error;
@@ -63,17 +91,25 @@ export default function TabPengguna() {
     loadUsers();
   }, [loadUsers]);
 
-  // Ubah Peran Pengguna
-  const handleUbahPeran = async (targetUser: PenggunaItem, newRole: "peserta" | "instruktur" | "admin") => {
+  // Request Ubah Peran
+  const requestUbahPeran = (targetUser: PenggunaItem, newRole: "peserta" | "instruktur" | "admin") => {
     if (targetUser.id === currentAdmin?.id) {
-      alert("Demi keamanan sistem, Anda tidak dapat mengubah peran akun Anda sendiri.");
+      setAlertModal({
+        isOpen: true,
+        title: "Tindakan Ditolak",
+        message: "Demi keamanan sistem, Anda tidak dapat mengubah peran akun Anda sendiri.",
+        type: "error",
+      });
       return;
     }
 
-    const confirmChange = window.confirm(
-      `Ubah peran "${targetUser.nama_lengkap}" dari [${targetUser.role.toUpperCase()}] menjadi [${newRole.toUpperCase()}]?`
-    );
-    if (!confirmChange) return;
+    setConfirmRoleModal({ user: targetUser, newRole });
+  };
+
+  // Eksekusi Ubah Peran Pengguna
+  const handleUbahPeran = async () => {
+    if (!confirmRoleModal) return;
+    const { user: targetUser, newRole } = confirmRoleModal;
 
     setProcessingId(targetUser.id);
     setFeedback(null);
@@ -81,24 +117,19 @@ export default function TabPengguna() {
       // 1. Update tabel profiles
       const { error: updErr } = await supabase
         .from("profiles")
-        .update({ role: newRole })
+        .update({ peran: newRole })
         .eq("id", targetUser.id);
 
       if (updErr) throw updErr;
 
       // 2. Catat audit log
       await supabase.from("audit_log").insert({
-        actor_id: currentAdmin?.id || null,
-        actor_email: currentAdmin?.email || "admin@pijaraksara.id",
-        aksi: "PERUBAHAN_PERAN_PENGGUNA",
-        tabel_target: "profiles",
-        record_id: targetUser.id,
-        data_baru: {
-          pengguna: targetUser.nama_lengkap,
-          email: targetUser.email,
-          peran_lama: targetUser.role,
-          peran_baru: newRole,
-        },
+        pelaku_id: currentAdmin?.id || null,
+        aksi: "ubah_peran_pengguna",
+        nama_tabel: "profiles",
+        id_data: targetUser.id,
+        data_sebelum: { peran: targetUser.peran },
+        data_sesudah: { peran: newRole },
       });
 
       setFeedback({
@@ -106,6 +137,7 @@ export default function TabPengguna() {
         text: `Peran untuk ${targetUser.nama_lengkap} berhasil diubah menjadi ${newRole}.`,
       });
 
+      setConfirmRoleModal(null);
       await loadUsers();
     } catch (err) {
       setFeedback({
@@ -117,54 +149,56 @@ export default function TabPengguna() {
     }
   };
 
-  // Aktifkan / Nonaktifkan Akun Pengguna
-  const handleToggleStatus = async (targetUser: PenggunaItem) => {
+  // Request Toggle Status Akun
+  const requestToggleStatus = (targetUser: PenggunaItem) => {
     if (targetUser.id === currentAdmin?.id) {
-      alert("Demi keamanan sistem, Anda tidak dapat menonaktifkan akun Anda sendiri.");
+      setAlertModal({
+        isOpen: true,
+        title: "Tindakan Ditolak",
+        message: "Demi keamanan sistem, Anda tidak dapat menonaktifkan akun Anda sendiri.",
+        type: "error",
+      });
       return;
     }
 
-    const newStatus = !targetUser.is_active;
-    const confirmToggle = window.confirm(
-      `${newStatus ? "Aktifkan kembali" : "Nonaktifkan"} akun "${targetUser.nama_lengkap}"?`
-    );
-    if (!confirmToggle) return;
+    setConfirmStatusModal({ user: targetUser, newStatus: !targetUser.aktif });
+  };
+
+  // Eksekusi Toggle Status Akun
+  const handleToggleStatus = async () => {
+    if (!confirmStatusModal) return;
+    const { user: targetUser, newStatus } = confirmStatusModal;
 
     setProcessingId(targetUser.id);
     setFeedback(null);
     try {
       const { error: updErr } = await supabase
         .from("profiles")
-        .update({ is_active: newStatus })
+        .update({ aktif: newStatus })
         .eq("id", targetUser.id);
 
       if (updErr) throw updErr;
 
       await supabase.from("audit_log").insert({
-        actor_id: currentAdmin?.id || null,
-        actor_email: currentAdmin?.email || "admin@pijaraksara.id",
-        aksi: "STATUS_AKUN_DIUBAH",
-        tabel_target: "profiles",
-        record_id: targetUser.id,
-        data_baru: {
-          pengguna: targetUser.nama_lengkap,
-          email: targetUser.email,
-          status_baru: newStatus ? "aktif" : "nonaktif",
-        },
+        pelaku_id: currentAdmin?.id || null,
+        aksi: newStatus ? "aktifkan_pengguna" : "nonaktifkan_pengguna",
+        nama_tabel: "profiles",
+        id_data: targetUser.id,
+        data_sebelum: { aktif: targetUser.aktif },
+        data_sesudah: { aktif: newStatus },
       });
 
       setFeedback({
         type: "success",
-        text: `Status akun ${targetUser.nama_lengkap} berhasil diubah menjadi ${
-          newStatus ? "Aktif" : "Nonaktif"
-        }.`,
+        text: `Akun "${targetUser.nama_lengkap}" berhasil ${newStatus ? "diaktifkan kembali" : "dinonaktifkan"}.`,
       });
 
+      setConfirmStatusModal(null);
       await loadUsers();
     } catch (err) {
       setFeedback({
         type: "error",
-        text: err instanceof Error ? err.message : "Gagal mengubah status akun.",
+        text: err instanceof Error ? err.message : "Gagal memperbarui status akun.",
       });
     } finally {
       setProcessingId(null);
@@ -172,6 +206,7 @@ export default function TabPengguna() {
   };
 
   const formatDate = (iso: string) => {
+    if (!iso) return "-";
     return new Date(iso).toLocaleDateString("id-ID", {
       day: "numeric",
       month: "short",
@@ -181,73 +216,95 @@ export default function TabPengguna() {
 
   const filteredUsers = userList.filter((u) => {
     const matchSearch =
-      u.nama_lengkap.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.email.toLowerCase().includes(searchQuery.toLowerCase());
+      (u.nama_lengkap || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (u.email || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (u.no_hp || "").toLowerCase().includes(searchQuery.toLowerCase());
 
     if (!matchSearch) return false;
-    if (roleFilter !== "semua" && u.role !== roleFilter) return false;
+    if (roleFilter !== "semua" && u.peran !== roleFilter) return false;
     return true;
   });
 
+  // Reset pagination saat search/filter berubah
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, roleFilter]);
+
+  const paginatedUsers = filteredUsers.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
   return (
     <div className="space-y-6">
-      {/* Notifikasi Feedback */}
+      {/* Feedback Message */}
       {feedback && (
         <div
-          className={`p-4 rounded-xl text-sm flex items-start gap-3 ${
+          className={`p-4 rounded-xl text-xs font-semibold flex items-center justify-between border ${
             feedback.type === "success"
-              ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
-              : "bg-rose-50 text-rose-800 border border-rose-200"
+              ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+              : "bg-rose-50 text-rose-800 border-rose-200"
           }`}
         >
-          {feedback.type === "success" ? (
-            <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-          ) : (
-            <AlertCircle className="w-5 h-5 text-rose-600 flex-shrink-0 mt-0.5" />
-          )}
-          <div className="flex-1 font-medium">{feedback.text}</div>
+          <div className="flex items-center gap-2">
+            {feedback.type === "success" ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            ) : (
+              <AlertCircle className="w-4 h-4 text-rose-600" />
+            )}
+            <span>{feedback.text}</span>
+          </div>
+          <button
+            onClick={() => setFeedback(null)}
+            className="text-slate-400 hover:text-slate-600"
+          >
+            ×
+          </button>
         </div>
       )}
 
-      {/* Toolbar Filter & Pencarian */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-col sm:flex-row gap-3 items-center justify-between">
+      {/* Kontrol dan Filter */}
+      <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+        {/* Search */}
         <div className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Cari nama atau email..."
-            className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+            placeholder="Cari nama, email, no handphone..."
+            className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-slate-50/50"
           />
         </div>
 
+        {/* Filter Peran */}
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <Filter className="w-4 h-4 text-slate-400" />
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
-            className="px-3 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
+            className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500 w-full sm:w-auto"
           >
             <option value="semua">Semua Peran</option>
             <option value="peserta">Peserta</option>
             <option value="instruktur">Instruktur</option>
-            <option value="admin">Administrator</option>
+            <option value="admin">Admin</option>
           </select>
         </div>
       </div>
 
       {/* Tabel Pengguna */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
         {loading ? (
-          <div className="py-16 text-center">
-            <div className="w-10 h-10 border-4 border-brand-200 border-t-brand-600 rounded-full animate-spin mx-auto mb-3" />
-            <p className="text-sm text-slate-500">Memuat data pengguna...</p>
+          <div className="py-20 text-center text-slate-400 space-y-3">
+            <div className="w-8 h-8 border-3 border-brand-200 border-t-brand-600 rounded-full animate-spin mx-auto" />
+            <p className="text-xs">Memuat daftar pengguna...</p>
           </div>
         ) : filteredUsers.length === 0 ? (
-          <div className="py-16 text-center text-slate-400">
-            <Users className="w-12 h-12 mx-auto mb-3 opacity-40 text-slate-400" />
-            <p className="text-sm font-medium">Tidak ada pengguna yang cocok dengan filter.</p>
+          <div className="py-20 text-center text-slate-400 space-y-2">
+            <Users className="w-10 h-10 text-slate-300 mx-auto" />
+            <p className="text-sm font-semibold text-slate-700">Tidak ada pengguna ditemukan</p>
+            <p className="text-xs font-medium">Tidak ada pengguna yang cocok dengan filter.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -263,7 +320,7 @@ export default function TabPengguna() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {filteredUsers.map((u) => {
+                {paginatedUsers.map((u) => {
                   const isSelf = u.id === currentAdmin?.id;
 
                   return (
@@ -288,17 +345,17 @@ export default function TabPengguna() {
 
                       {/* Peran */}
                       <td className="px-4 py-4 whitespace-nowrap">
-                        {u.role === "admin" && (
+                        {u.peran === "admin" && (
                           <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800 flex items-center gap-1 w-fit">
                             <Shield className="w-3 h-3" /> Admin
                           </span>
                         )}
-                        {u.role === "instruktur" && (
+                        {u.peran === "instruktur" && (
                           <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
                             Instruktur
                           </span>
                         )}
-                        {u.role === "peserta" && (
+                        {u.peran === "peserta" && (
                           <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700">
                             Peserta
                           </span>
@@ -307,7 +364,7 @@ export default function TabPengguna() {
 
                       {/* Status */}
                       <td className="px-4 py-4 whitespace-nowrap">
-                        {u.is_active ? (
+                        {u.aktif ? (
                           <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 flex items-center gap-1 w-fit">
                             <UserCheck className="w-3 h-3" /> Aktif
                           </span>
@@ -331,10 +388,10 @@ export default function TabPengguna() {
                           <div className="flex items-center justify-end gap-2">
                             {/* Pilihan Peran */}
                             <select
-                              value={u.role}
+                              value={u.peran}
                               disabled={processingId === u.id}
                               onChange={(e) =>
-                                handleUbahPeran(
+                                requestUbahPeran(
                                   u,
                                   e.target.value as "peserta" | "instruktur" | "admin"
                                 )
@@ -348,16 +405,16 @@ export default function TabPengguna() {
 
                             {/* Tombol Toggle Status */}
                             <button
-                              onClick={() => handleToggleStatus(u)}
+                              onClick={() => requestToggleStatus(u)}
                               disabled={processingId === u.id}
                               className={`p-1.5 rounded-lg border transition ${
-                                u.is_active
+                                u.aktif
                                   ? "border-rose-200 text-rose-600 hover:bg-rose-50"
                                   : "border-emerald-200 text-emerald-600 hover:bg-emerald-50"
                               }`}
-                              title={u.is_active ? "Nonaktifkan Akun" : "Aktifkan Akun"}
+                              title={u.aktif ? "Nonaktifkan Akun" : "Aktifkan Akun"}
                             >
-                              {u.is_active ? (
+                              {u.aktif ? (
                                 <UserX className="w-3.5 h-3.5" />
                               ) : (
                                 <UserCheck className="w-3.5 h-3.5" />
@@ -373,7 +430,56 @@ export default function TabPengguna() {
             </table>
           </div>
         )}
+
+        {/* Pagination */}
+        {!loading && (
+          <Pagination
+            currentPage={currentPage}
+            totalItems={filteredUsers.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+          />
+        )}
       </div>
+
+      {/* Modal Konfirmasi Ubah Peran */}
+      <ConfirmModal
+        isOpen={confirmRoleModal !== null}
+        onClose={() => setConfirmRoleModal(null)}
+        onConfirm={handleUbahPeran}
+        title="Ubah Peran Pengguna?"
+        message={`Ubah peran "${confirmRoleModal?.user.nama_lengkap}" dari [${confirmRoleModal?.user.peran.toUpperCase()}] menjadi [${confirmRoleModal?.newRole.toUpperCase()}]? Hak akses navigasi pengguna akan langsung menyesuaikan peran baru.`}
+        confirmLabel="Ya, Ubah Peran"
+        cancelLabel="Batal"
+        variant="warning"
+        loading={processingId !== null}
+      />
+
+      {/* Modal Konfirmasi Status Akun */}
+      <ConfirmModal
+        isOpen={confirmStatusModal !== null}
+        onClose={() => setConfirmStatusModal(null)}
+        onConfirm={handleToggleStatus}
+        title={`${confirmStatusModal?.newStatus ? "Aktifkan Kembali" : "Nonaktifkan"} Akun Pengguna?`}
+        message={`${
+          confirmStatusModal?.newStatus
+            ? `Aktifkan kembali akun "${confirmStatusModal?.user.nama_lengkap}"? Pengguna akan dapat login dan mengakses materi kursusnya kembali.`
+            : `Nonaktifkan akun "${confirmStatusModal?.user.nama_lengkap}"? Pengguna tidak akan dapat mengakses ruang belajar atau mendaftar kursus baru.`
+        }`}
+        confirmLabel={confirmStatusModal?.newStatus ? "Ya, Aktifkan" : "Ya, Nonaktifkan"}
+        cancelLabel="Batal"
+        variant={confirmStatusModal?.newStatus ? "success" : "danger"}
+        loading={processingId !== null}
+      />
+
+      {/* Modal Alert Informasi/Peringatan */}
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal((prev) => ({ ...prev, isOpen: false }))}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+      />
     </div>
   );
 }

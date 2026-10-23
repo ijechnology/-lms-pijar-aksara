@@ -3,6 +3,8 @@
 import React, { useState } from "react";
 import { Plus, Edit2, Trash2, Lock, FileText, Video, Download, Upload, AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import ConfirmModal from "@/components/ui/ConfirmModal";
+import AlertModal from "@/components/ui/AlertModal";
 
 export interface ModulData {
   id: string;
@@ -153,16 +155,39 @@ export default function EditorModul({
     }
   };
 
-  const handleDelete = async (id: string, judulModul: string) => {
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; judul: string } | null>(null);
+  const [alertModal, setAlertModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: "info" | "error" | "success";
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "info",
+  });
+
+  const confirmDelete = (id: string, judulModul: string) => {
     if (isLocked) return;
-    if (!confirm(`Hapus modul "${judulModul}" beserta seluruh butir soalnya?`)) return;
+    setDeleteTarget({ id, judul: judulModul });
+  };
+
+  const executeDelete = async () => {
+    if (!deleteTarget) return;
 
     try {
-      const { error } = await supabase.from("modul").delete().eq("id", id);
+      const { error } = await supabase.from("modul").delete().eq("id", deleteTarget.id);
       if (error) throw error;
+      setDeleteTarget(null);
       await onRefresh();
     } catch (err: unknown) {
-      alert("Gagal menghapus modul: " + (err instanceof Error ? err.message : String(err)));
+      setAlertModal({
+        isOpen: true,
+        title: "Gagal Menghapus Modul",
+        message: err instanceof Error ? err.message : String(err),
+        type: "error",
+      });
     }
   };
 
@@ -251,9 +276,13 @@ export default function EditorModul({
                 <div className="flex items-center gap-2 self-end sm:self-center" onClick={(e) => e.stopPropagation()}>
                   <button
                     onClick={() => onSelectModulForSoal(m)}
-                    className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition"
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                      isSelected
+                        ? "bg-brand-600 text-white"
+                        : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                    }`}
                   >
-                    Kelola Soal ({m.soal_count ?? 0})
+                    {isLocked ? "Lihat Detail" : "Lihat & Kelola"}
                   </button>
 
                   {!isLocked && (
@@ -266,7 +295,7 @@ export default function EditorModul({
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => handleDelete(m.id, m.judul)}
+                        onClick={() => confirmDelete(m.id, m.judul)}
                         title="Hapus Modul"
                         className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition"
                       >
@@ -391,6 +420,27 @@ export default function EditorModul({
           </div>
         </div>
       )}
+
+      {/* Modal Konfirmasi Hapus Modul */}
+      <ConfirmModal
+        isOpen={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={executeDelete}
+        title="Hapus Modul Kurikulum?"
+        message={`Apakah Anda yakin ingin menghapus modul "${deleteTarget?.judul}" beserta seluruh butir soal kuis di dalamnya? Tindakan ini tidak dapat dibatalkan.`}
+        confirmLabel="Ya, Hapus Modul"
+        cancelLabel="Batal"
+        variant="danger"
+      />
+
+      {/* Modal Notifikasi */}
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal((prev) => ({ ...prev, isOpen: false }))}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+      />
     </div>
   );
 }

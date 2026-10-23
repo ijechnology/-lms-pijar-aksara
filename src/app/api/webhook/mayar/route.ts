@@ -19,31 +19,44 @@ export async function POST(request: NextRequest) {
     console.log("[Webhook Mayar] Menerima event webhook:", payload.event || payload.status);
 
     // 1. Ekstraksi Informasi Invoice & Pendaftaran
-    const event = payload.event;
+    const event = payload.event || payload.action || "payment.received";
     const data = payload.data || payload;
-    const invoiceId = data.id || data.invoice_id || payload.id;
-    const externalId = data.externalId || data.external_id || payload.externalId;
-
-    if (!externalId) {
-      console.warn(
-        "[Webhook Mayar] Webhook diabaikan karena tidak mengandung externalId (pendaftaran_id)."
-      );
-      return NextResponse.json({ received: true, ignored: "Missing externalId" });
-    }
+    const invoiceId =
+      data.id || data.invoiceId || data.invoice_id || data.paymentLinkId || payload.id;
+    const externalId =
+      data.externalId ||
+      data.external_id ||
+      data.extraData?.pendaftaran_id ||
+      data.extraData?.pendaftaranId ||
+      payload.externalId;
 
     const supabaseAdmin = createAdminClient();
 
-    // 2. Cek Idempotensi Mutlak (INV-02)
-    const { data: reg, error: regErr } = await supabaseAdmin
-      .from("pendaftaran")
-      .select("id, status_pembayaran, kursus_id, user_id")
-      .eq("id", externalId)
-      .single();
+    // 2. Cari Pendaftaran Berdasarkan externalId atau mayar_invoice_id
+    let reg: any = null;
 
-    if (regErr || !reg) {
-      console.error(
-        "[Webhook Mayar] Data pendaftaran tidak ditemukan untuk externalId:",
-        externalId
+    if (externalId) {
+      const { data: regById } = await supabaseAdmin
+        .from("pendaftaran")
+        .select("id, status, kursus_id, peserta_id, mayar_invoice_id")
+        .eq("id", externalId)
+        .maybeSingle();
+      reg = regById;
+    }
+
+    if (!reg && invoiceId) {
+      const { data: regByInvoice } = await supabaseAdmin
+        .from("pendaftaran")
+        .select("id, status, kursus_id, peserta_id, mayar_invoice_id")
+        .eq("mayar_invoice_id", invoiceId)
+        .maybeSingle();
+      reg = regByInvoice;
+    }
+
+    if (!reg) {
+      console.warn(
+        "[Webhook Mayar] Data pendaftaran tidak ditemukan untuk payload webhook:",
+        { externalId, invoiceId }
       );
       return NextResponse.json(
         { error: "Pendaftaran tidak ditemukan." },
@@ -51,11 +64,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Jika sudah aktif, kembalikan 200 OK langsung (Idempoten)
-    if (reg.status_pembayaran === "aktif") {
+    // 3. Cek Idempotensi Mutlak (INV-02)
+    // Jika sudah aktif / selesai, kembalikan 200 OK langsung (Idempoten)
+    if (reg.status === "aktif" || reg.status === "selesai") {
       console.log(
         "[Webhook Mayar] Pendaftaran",
-        externalId,
+        reg.id,
         "sudah aktif sebelumnya. Mengembalikan 200 OK idempotent."
       );
       return NextResponse.json({
@@ -65,13 +79,14 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 3. Verifikasi Ulang ke Server Mayar (Anti-Spoofing)
+    // 4. Verifikasi Ulang ke Server Mayar (Anti-Spoofing)
     if (invoiceId) {
       try {
         const verifiedInvoice = await getMayarInvoiceDetail(invoiceId);
         const invoiceStatus = (verifiedInvoice.status || "").toUpperCase();
 
-        if (invoiceStatus !== "PAID" && invoiceStatus !== "SETTLED" && invoiceStatus !== "SUCCESS") {
+        const paidStatuses = ["PAID", "SETTLED", "SUCCESS", "CLOSED"];
+        if (!paidStatuses.includes(invoiceStatus)) {
           console.warn(
             "[Webhook Mayar] Status invoice terverifikasi dari Mayar belum lunas:",
             invoiceStatus
@@ -88,30 +103,33 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 4. Aktivasi Akses Kursus Melalui RPC Atomik Database
-    const { data: rpcRes, error: rpcErr } = await supabaseAdmin.rpc(
-      "konfirmasi_pembayaran_manual",
-      {
-        p_pendaftaran_id: reg.id,
-      }
-    );
+    // 5. Aktivasi Akses Kursus Menggunakan Service Role
+    const nowIso = new Date().toISOString();
+    const { error: updateErr } = await supabaseAdmin
+      .from("pendaftaran")
+      .update({
+        status: "aktif",
+        dibayar_pada: nowIso,
+        metode_bayar: "mayar",
+        mayar_invoice_id: invoiceId || reg.mayar_invoice_id,
+      })
+      .eq("id", reg.id);
 
-    if (rpcErr) {
-      console.error("[Webhook Mayar] Gagal mengeksekusi RPC aktivasi pendaftaran:", rpcErr);
-      throw new Error(`Aktivasi gagal: ${rpcErr.message}`);
+    if (updateErr) {
+      console.error("[Webhook Mayar] Gagal mengaktifkan pendaftaran:", updateErr);
+      throw new Error(`Aktivasi gagal: ${updateErr.message}`);
     }
 
-    // 5. Catat Audit Log Khusus Webhook Mayar
+    // 6. Catat Audit Log Khusus Webhook Mayar
     await supabaseAdmin.from("audit_log").insert({
-      actor_id: null,
-      actor_email: "webhook@mayar.id",
-      aksi: "PEMBAYARAN_WEBHOOK_MAYAR_BERHASIL",
-      tabel_target: "pendaftaran",
-      record_id: reg.id,
-      data_baru: {
+      pelaku_id: null,
+      aksi: "pembayaran_webhook_mayar",
+      nama_tabel: "pendaftaran",
+      id_data: reg.id,
+      data_sesudah: {
         invoice_id: invoiceId,
         amount: data.amount,
-        event: event || "payment.received",
+        event: event,
         pendaftaran_id: reg.id,
       },
     });

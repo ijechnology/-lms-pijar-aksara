@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { CheckCircle2, Lock, PlayCircle, BookOpen } from "lucide-react";
+import { CheckCircle2, Lock, PlayCircle, BookOpen, Award } from "lucide-react";
 
 export interface ModulStatusItem {
   id: string;
@@ -89,6 +89,18 @@ export default function SidebarModul({
           );
         })}
       </nav>
+
+      {modulList.length > 0 && modulList.every((m) => m.isLulus) && (
+        <div className="pt-3 border-t border-slate-100">
+          <Link
+            href={`/kursus-saya/${pendaftaranId}/sertifikat`}
+            className="flex items-center justify-center gap-2 p-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold text-xs shadow-xs transition"
+          >
+            <Award className="w-4 h-4 text-emerald-600" />
+            <span>Lihat Sertifikat Kelulusan</span>
+          </Link>
+        </div>
+      )}
     </aside>
   );
 }

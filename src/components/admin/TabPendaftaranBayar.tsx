@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
+import ConfirmModal from "@/components/ui/ConfirmModal";
+import Pagination from "@/components/ui/Pagination";
 import {
   CreditCard,
   CheckCircle2,
@@ -17,11 +19,13 @@ import {
 
 interface PendaftaranAdminItem {
   id: string;
-  user_id: string;
+  peserta_id: string;
   kursus_id: string;
-  status_pembayaran: "menunggu_pembayaran" | "menunggu_konfirmasi" | "aktif" | "dibatalkan";
-  batas_pembayaran: string | null;
-  dibuat_pada: string;
+  status: "menunggu_bayar" | "aktif" | "selesai" | "kedaluwarsa" | "dibatalkan";
+  nominal: number;
+  metode_bayar: string;
+  batas_bayar: string | null;
+  didaftarkan_pada: string;
   user: {
     nama_lengkap: string;
     email: string;
@@ -41,6 +45,11 @@ export default function TabPendaftaranBayar() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("semua");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Modal Konfirmasi Manual
+  const [targetKonfirmasi, setTargetKonfirmasi] = useState<PendaftaranAdminItem | null>(null);
 
   // Modal Pembatalan Pendaftaran
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
@@ -56,11 +65,11 @@ export default function TabPendaftaranBayar() {
       const { data, error } = await supabase
         .from("pendaftaran")
         .select(`
-          id, user_id, kursus_id, status_pembayaran, batas_pembayaran, dibuat_pada,
-          user:profiles!pendaftaran_user_id_fkey (nama_lengkap, email, no_hp),
+          id, peserta_id, kursus_id, status, nominal, metode_bayar, batas_bayar, didaftarkan_pada,
+          user:profiles!pendaftaran_peserta_id_fkey (nama_lengkap, email, no_hp),
           kursus (judul, harga, kuota)
         `)
-        .order("dibuat_pada", { ascending: false });
+        .order("didaftarkan_pada", { ascending: false });
 
       if (error) throw error;
       setRegList((data as any) || []);
@@ -79,26 +88,24 @@ export default function TabPendaftaranBayar() {
   }, [loadData]);
 
   // Konfirmasi Pembayaran Manual via Database RPC
-  const handleKonfirmasiManual = async (reg: PendaftaranAdminItem) => {
-    const confirmManual = window.confirm(
-      `Konfirmasi pembayaran manual untuk peserta ${reg.user?.nama_lengkap || reg.user?.email} pada kursus "${reg.kursus?.judul}"? Status pendaftaran akan diaktifkan.`
-    );
-    if (!confirmManual) return;
+  const handleKonfirmasiManual = async () => {
+    if (!targetKonfirmasi) return;
 
     setProcessing(true);
     setFeedback(null);
     try {
-      const { data, error } = await supabase.rpc("konfirmasi_pembayaran_manual", {
-        p_pendaftaran_id: reg.id,
+      const { error } = await supabase.rpc("konfirmasi_pembayaran_manual", {
+        p_pendaftaran_id: targetKonfirmasi.id,
       });
 
       if (error) throw error;
 
       setFeedback({
         type: "success",
-        text: `Pendaftaran berhasil dikonfirmasi secara manual! Akses kursus telah dibuka untuk ${reg.user?.nama_lengkap}.`,
+        text: `Pendaftaran berhasil dikonfirmasi secara manual! Akses kursus telah dibuka untuk ${targetKonfirmasi.user?.nama_lengkap || "peserta"}.`,
       });
 
+      setTargetKonfirmasi(null);
       await loadData();
     } catch (err) {
       setFeedback({
@@ -127,7 +134,11 @@ export default function TabPendaftaranBayar() {
       // 1. Update status pendaftaran menjadi dibatalkan
       const { error: updErr } = await supabase
         .from("pendaftaran")
-        .update({ status_pembayaran: "dibatalkan" })
+        .update({
+          status: "dibatalkan",
+          alasan_batal: cancelReason.trim(),
+          dibatalkan_pada: new Date().toISOString(),
+        })
         .eq("id", targetReg.id);
 
       if (updErr) throw updErr;
@@ -138,12 +149,11 @@ export default function TabPendaftaranBayar() {
       } = await supabase.auth.getUser();
 
       await supabase.from("audit_log").insert({
-        actor_id: adminUser?.id || null,
-        actor_email: adminUser?.email || "admin@pijaraksara.id",
-        aksi: "PEMBATALAN_PENDAFTARAN",
-        tabel_target: "pendaftaran",
-        record_id: targetReg.id,
-        data_baru: {
+        pelaku_id: adminUser?.id || null,
+        aksi: "batalkan_pendaftaran",
+        nama_tabel: "pendaftaran",
+        id_data: targetReg.id,
+        data_sesudah: {
           alasan: cancelReason.trim(),
           kursus: targetReg.kursus?.judul,
           peserta: targetReg.user?.nama_lengkap,
@@ -178,6 +188,7 @@ export default function TabPendaftaranBayar() {
   };
 
   const formatDate = (iso: string) => {
+    if (!iso) return "-";
     return new Date(iso).toLocaleDateString("id-ID", {
       day: "numeric",
       month: "short",
@@ -194,9 +205,19 @@ export default function TabPendaftaranBayar() {
       (r.kursus?.judul || "").toLowerCase().includes(searchQuery.toLowerCase());
 
     if (!matchSearch) return false;
-    if (statusFilter !== "semua" && r.status_pembayaran !== statusFilter) return false;
+    if (statusFilter !== "semua" && r.status !== statusFilter) return false;
     return true;
   });
+
+  // Reset pagination saat search/filter berubah
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter]);
+
+  const paginatedList = filteredList.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   const getStatusBadge = (st: string) => {
     switch (st) {
@@ -206,16 +227,22 @@ export default function TabPendaftaranBayar() {
             Aktif / Lunas
           </span>
         );
-      case "menunggu_konfirmasi":
+      case "selesai":
         return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 animate-pulse">
-            Menunggu Konfirmasi
+          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
+            Selesai / Lulus
           </span>
         );
-      case "menunggu_pembayaran":
+      case "menunggu_bayar":
         return (
           <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800">
             Menunggu Bayar
+          </span>
+        );
+      case "kedaluwarsa":
+        return (
+          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600">
+            Kedaluwarsa
           </span>
         );
       case "dibatalkan":
@@ -225,198 +252,248 @@ export default function TabPendaftaranBayar() {
           </span>
         );
       default:
-        return null;
+        return (
+          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700">
+            {st}
+          </span>
+        );
     }
   };
 
   return (
     <div className="space-y-6">
-      {/* Notifikasi Feedback */}
+      {/* Feedback Message */}
       {feedback && (
         <div
-          className={`p-4 rounded-xl text-sm flex items-start gap-3 ${
+          className={`p-4 rounded-xl text-xs font-semibold flex items-center justify-between border ${
             feedback.type === "success"
-              ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
-              : "bg-rose-50 text-rose-800 border border-rose-200"
+              ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+              : "bg-rose-50 text-rose-800 border-rose-200"
           }`}
         >
-          {feedback.type === "success" ? (
-            <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-          ) : (
-            <AlertCircle className="w-5 h-5 text-rose-600 flex-shrink-0 mt-0.5" />
-          )}
-          <div className="flex-1 font-medium">{feedback.text}</div>
+          <div className="flex items-center gap-2">
+            {feedback.type === "success" ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            ) : (
+              <AlertCircle className="w-4 h-4 text-rose-600" />
+            )}
+            <span>{feedback.text}</span>
+          </div>
+          <button
+            onClick={() => setFeedback(null)}
+            className="text-slate-400 hover:text-slate-600"
+          >
+            ×
+          </button>
         </div>
       )}
 
-      {/* Toolbar Filter & Pencarian */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-col sm:flex-row gap-3 items-center justify-between">
-        <div className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+      {/* Kontrol & Filter */}
+      <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+        {/* Search Input */}
+        <div className="relative w-full sm:w-96">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Cari nama peserta, email, kursus..."
-            className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+            placeholder="Cari peserta, email, atau judul kursus..."
+            className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-slate-50/50"
           />
         </div>
 
+        {/* Filter Dropdown */}
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <Filter className="w-4 h-4 text-slate-400" />
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
+            className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500 w-full sm:w-auto"
           >
-            <option value="semua">Semua Status Transaksi</option>
-            <option value="menunggu_konfirmasi">Menunggu Konfirmasi Manual</option>
-            <option value="menunggu_pembayaran">Menunggu Pembayaran</option>
+            <option value="semua">Semua Status</option>
+            <option value="menunggu_bayar">Menunggu Bayar</option>
             <option value="aktif">Aktif / Lunas</option>
+            <option value="selesai">Selesai / Lulus</option>
+            <option value="kedaluwarsa">Kedaluwarsa</option>
             <option value="dibatalkan">Dibatalkan</option>
           </select>
         </div>
       </div>
 
-      {/* Tabel Transaksi Pendaftaran */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      {/* Tabel Data Pendaftaran */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
         {loading ? (
-          <div className="py-16 text-center">
-            <div className="w-10 h-10 border-4 border-brand-200 border-t-brand-600 rounded-full animate-spin mx-auto mb-3" />
-            <p className="text-sm text-slate-500">Memuat transaksi pendaftaran...</p>
+          <div className="py-20 text-center text-slate-400 space-y-3">
+            <div className="w-8 h-8 border-3 border-brand-200 border-t-brand-600 rounded-full animate-spin mx-auto" />
+            <p className="text-xs">Memuat data pendaftaran dan pembayaran...</p>
           </div>
         ) : filteredList.length === 0 ? (
-          <div className="py-16 text-center text-slate-400">
-            <CreditCard className="w-12 h-12 mx-auto mb-3 opacity-40 text-slate-400" />
-            <p className="text-sm font-medium">Tidak ada data pendaftaran yang sesuai filter.</p>
+          <div className="py-20 text-center text-slate-400 space-y-2">
+            <CreditCard className="w-10 h-10 text-slate-300 mx-auto" />
+            <p className="text-sm font-semibold text-slate-700">Tidak ada pendaftaran ditemukan</p>
+            <p className="text-xs text-slate-500">Sesuaikan kata kunci pencarian atau filter status.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-slate-700">
-              <thead className="bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200">
-                <tr>
-                  <th className="px-5 py-4">Peserta</th>
-                  <th className="px-4 py-4">Kursus</th>
-                  <th className="px-4 py-4">Biaya</th>
-                  <th className="px-4 py-4">Waktu Daftar / Batas</th>
-                  <th className="px-4 py-4">Status Pembayaran</th>
-                  <th className="px-5 py-4 text-right">Aksi Admin</th>
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                  <th className="px-5 py-3.5">Peserta</th>
+                  <th className="px-4 py-3.5">Kursus</th>
+                  <th className="px-4 py-3.5">Nominal / Metode</th>
+                  <th className="px-4 py-3.5">Waktu Daftar</th>
+                  <th className="px-4 py-3.5">Status</th>
+                  <th className="px-5 py-3.5 text-right">Aksi</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200">
-                {filteredList.map((r) => (
-                  <tr key={r.id} className="hover:bg-slate-50/80 transition">
-                    {/* Peserta */}
-                    <td className="px-5 py-4">
-                      <div className="font-bold text-slate-900">{r.user?.nama_lengkap}</div>
-                      <div className="text-xs text-slate-500">{r.user?.email}</div>
-                      {r.user?.no_hp && (
-                        <div className="text-[11px] text-slate-400 mt-0.5">{r.user?.no_hp}</div>
-                      )}
-                    </td>
+              <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+                {paginatedList.map((r) => {
+                  return (
+                    <tr key={r.id} className="hover:bg-slate-50/70 transition">
+                      {/* Peserta */}
+                      <td className="px-5 py-4 whitespace-nowrap">
+                        <div className="font-bold text-slate-900">{r.user?.nama_lengkap || "Anonim"}</div>
+                        <div className="text-[11px] text-slate-500">{r.user?.email}</div>
+                        {r.user?.no_hp && (
+                          <div className="text-[11px] text-slate-400">{r.user.no_hp}</div>
+                        )}
+                      </td>
 
-                    {/* Kursus */}
-                    <td className="px-4 py-4">
-                      <div className="font-medium text-slate-800">{r.kursus?.judul}</div>
-                    </td>
-
-                    {/* Biaya */}
-                    <td className="px-4 py-4 whitespace-nowrap font-bold text-slate-900">
-                      {r.kursus?.harga === 0 ? "Gratis" : formatRupiah(r.kursus?.harga || 0)}
-                    </td>
-
-                    {/* Waktu */}
-                    <td className="px-4 py-4 text-xs text-slate-500 whitespace-nowrap">
-                      <div>{formatDate(r.dibuat_pada)}</div>
-                      {r.batas_pembayaran && (
-                        <div className="text-[11px] text-amber-700 font-medium mt-0.5">
-                          Batas: {formatDate(r.batas_pembayaran)}
+                      {/* Kursus */}
+                      <td className="px-4 py-4 max-w-xs">
+                        <div className="font-semibold text-slate-900 line-clamp-1">
+                          {r.kursus?.judul || "Kursus"}
                         </div>
-                      )}
-                    </td>
+                      </td>
 
-                    {/* Status */}
-                    <td className="px-4 py-4 whitespace-nowrap">
-                      {getStatusBadge(r.status_pembayaran)}
-                    </td>
+                      {/* Nominal / Metode */}
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <div className="font-bold text-slate-900">{formatRupiah(r.nominal ?? r.kursus?.harga ?? 0)}</div>
+                        <div className="text-[11px] text-slate-500 capitalize">{r.metode_bayar || "Mayar"}</div>
+                      </td>
 
-                    {/* Aksi */}
-                    <td className="px-5 py-4 text-right whitespace-nowrap">
-                      <div className="flex items-center justify-end gap-2">
-                        {/* Tombol Konfirmasi Manual */}
-                        {r.status_pembayaran !== "aktif" && r.status_pembayaran !== "dibatalkan" && (
-                          <button
-                            onClick={() => handleKonfirmasiManual(r)}
-                            disabled={processing}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-sm"
-                          >
-                            <CheckCircle2 className="w-3.5 h-3.5" /> Konfirmasi Manual
-                          </button>
+                      {/* Waktu Daftar & Batas Bayar */}
+                      <td className="px-4 py-4 whitespace-nowrap text-slate-500">
+                        <div>{formatDate(r.didaftarkan_pada)}</div>
+                        {r.batas_bayar && r.status === "menunggu_bayar" && (
+                          <div className="text-[11px] text-amber-700 font-medium mt-0.5">
+                            Batas: {formatDate(r.batas_bayar)}
+                          </div>
                         )}
+                      </td>
 
-                        {/* Tombol Batalkan */}
-                        {r.status_pembayaran !== "dibatalkan" && (
-                          <button
-                            onClick={() => {
-                              setTargetReg(r);
-                              setCancelReason("");
-                              setFeedback(null);
-                              setCancelModalOpen(true);
-                            }}
-                            disabled={processing}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs font-bold transition"
-                          >
-                            <XCircle className="w-3.5 h-3.5" /> Batalkan
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      {/* Status */}
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        {getStatusBadge(r.status)}
+                      </td>
+
+                      {/* Aksi */}
+                      <td className="px-5 py-4 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-2">
+                          {/* Tombol Konfirmasi Manual */}
+                          {r.status === "menunggu_bayar" && (
+                            <button
+                              onClick={() => setTargetKonfirmasi(r)}
+                              disabled={processing}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-sm"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" /> Konfirmasi Manual
+                            </button>
+                          )}
+
+                          {/* Tombol Batalkan */}
+                          {r.status !== "dibatalkan" && r.status !== "selesai" && (
+                            <button
+                              onClick={() => {
+                                setTargetReg(r);
+                                setCancelReason("");
+                                setFeedback(null);
+                                setCancelModalOpen(true);
+                              }}
+                              disabled={processing}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs font-bold transition"
+                            >
+                              <XCircle className="w-3.5 h-3.5" /> Batalkan
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
+
+        {/* Pagination */}
+        {!loading && (
+          <Pagination
+            currentPage={currentPage}
+            totalItems={filteredList.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+          />
+        )}
       </div>
 
-      {/* Modal Batalkan Pendaftaran (Wajib alasan >= 10 karakter) */}
+      {/* Modal Konfirmasi Manual (Modern UI) */}
+      <ConfirmModal
+        isOpen={targetKonfirmasi !== null}
+        onClose={() => setTargetKonfirmasi(null)}
+        onConfirm={handleKonfirmasiManual}
+        title="Konfirmasi Pembayaran Manual?"
+        message={`Konfirmasi pembayaran manual untuk peserta ${targetKonfirmasi?.user?.nama_lengkap || targetKonfirmasi?.user?.email} pada kursus "${targetKonfirmasi?.kursus?.judul}"? Status pendaftaran akan langsung diaktifkan dan kuota kursi dikurangi.`}
+        confirmLabel="Ya, Konfirmasi Lunas"
+        cancelLabel="Batal"
+        variant="success"
+        loading={processing}
+      />
+
+      {/* Modal Pembatalan Pendaftaran */}
       {cancelModalOpen && targetReg && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+          {/* Backdrop overlay dengan blur sempurna */}
+          <div
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-md transition-opacity"
+            aria-hidden="true"
+            onClick={() => !processing && setCancelModalOpen(false)}
+          />
+          <div className="relative z-10 bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center flex-shrink-0">
                 <XCircle className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-slate-900">Batalkan Pendaftaran</h3>
+                <h3 className="text-base font-bold text-slate-900">Batalkan Pendaftaran</h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Peserta: <span className="font-semibold">{targetReg.user?.nama_lengkap}</span> |{" "}
-                  {targetReg.kursus?.judul}
+                  Peserta: <span className="font-semibold">{targetReg.user?.nama_lengkap}</span>
+                </p>
+                <p className="text-xs text-slate-500">
+                  Kursus: <span className="font-semibold">{targetReg.kursus?.judul}</span>
                 </p>
               </div>
             </div>
 
             <div className="space-y-2">
               <label className="block text-xs font-bold text-slate-700">
-                Alasan Pembatalan Pendaftaran (Wajib min. 10 karakter):
+                Alasan Pembatalan (Wajib min. 10 karakter):
               </label>
               <textarea
-                rows={4}
+                rows={3}
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
-                placeholder="Contoh: Melewati batas waktu pembayaran 24 jam / Peserta membatalkan registrasi..."
+                placeholder="Contoh: Peserta salah memilih jadwal kursus atau batas waktu pembayaran terlampaui..."
                 className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500"
               />
               <div className="flex justify-between items-center text-xs text-slate-500">
-                <span>Alasan akan dicatat ke dalam audit log sistem</span>
+                <span>Minimal 10 karakter</span>
                 <span
                   className={
-                    cancelReason.trim().length >= 10
-                      ? "text-emerald-600 font-bold"
-                      : "text-rose-600 font-bold"
+                    cancelReason.trim().length >= 10 ? "text-emerald-600 font-bold" : "text-rose-600 font-bold"
                   }
                 >
-                  {cancelReason.trim().length} / 10 karakter
+                  {cancelReason.trim().length} / 10
                 </span>
               </div>
             </div>
@@ -427,15 +504,15 @@ export default function TabPendaftaranBayar() {
                 onClick={() => setCancelModalOpen(false)}
                 className="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 text-xs font-semibold hover:bg-slate-50"
               >
-                Kembali
+                Batal
               </button>
               <button
                 type="button"
                 onClick={handleBatalkanPendaftaran}
                 disabled={processing || cancelReason.trim().length < 10}
-                className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:bg-slate-300 text-white text-xs font-bold shadow-md transition"
+                className="px-4 py-2 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 transition disabled:opacity-50"
               >
-                {processing ? "Memproses..." : "Ya, Batalkan Pendaftaran"}
+                {processing ? "Memproses..." : "Batalkan Pendaftaran"}
               </button>
             </div>
           </div>

@@ -99,8 +99,11 @@ export default function Navbar() {
               .filter((item) => item.show)
               .map((link) => {
                 const isActive =
-                  pathname === link.href ||
-                  (link.href !== "/" && pathname.startsWith(link.href));
+                  link.href === "/"
+                    ? pathname === "/"
+                    : link.href === "/admin"
+                    ? pathname === "/admin"
+                    : pathname === link.href || pathname.startsWith(link.href + "/");
                 const Icon = link.icon;
                 return (
                   <Link
@@ -125,12 +128,21 @@ export default function Navbar() {
               <div className="w-24 h-8 bg-slate-100 animate-pulse rounded-lg" />
             ) : user ? (
               <div className="flex items-center gap-3 pl-2 border-l border-slate-200">
-                <div className="text-right">
-                  <div className="text-sm font-semibold text-slate-800 leading-tight">
-                    {profile?.nama_lengkap || user.email?.split("@")[0]}
+                <Link
+                  href="/profil"
+                  className="flex items-center gap-2.5 text-right hover:bg-slate-100/80 px-2.5 py-1.5 rounded-xl transition group cursor-pointer"
+                  title="Profil & Pengaturan Akun"
+                >
+                  <div>
+                    <div className="text-sm font-semibold text-slate-800 group-hover:text-brand-600 leading-tight">
+                      {profile?.nama_lengkap || user.email?.split("@")[0]}
+                    </div>
+                    <div className="mt-0.5">{getRoleBadge(role)}</div>
                   </div>
-                  <div className="mt-0.5">{getRoleBadge(role)}</div>
-                </div>
+                  <div className="w-8 h-8 rounded-full bg-brand-50 border border-brand-200 text-brand-700 flex items-center justify-center font-bold text-xs group-hover:bg-brand-600 group-hover:text-white transition">
+                    <User className="w-4 h-4" />
+                  </div>
+                </Link>
 
                 <button
                   onClick={signOut}
@@ -183,8 +195,11 @@ export default function Navbar() {
               .filter((item) => item.show)
               .map((link) => {
                 const isActive =
-                  pathname === link.href ||
-                  (link.href !== "/" && pathname.startsWith(link.href));
+                  link.href === "/"
+                    ? pathname === "/"
+                    : link.href === "/admin"
+                    ? pathname === "/admin"
+                    : pathname === link.href || pathname.startsWith(link.href + "/");
                 const Icon = link.icon;
                 return (
                   <Link
@@ -207,15 +222,25 @@ export default function Navbar() {
           <div className="pt-3 border-t border-slate-100">
             {user ? (
               <div className="space-y-3">
-                <div className="flex items-center justify-between px-3 py-2 bg-slate-50 rounded-lg">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900">
-                      {profile?.nama_lengkap || user.email}
-                    </p>
-                    <p className="text-xs text-slate-500">{user.email}</p>
+                <Link
+                  href="/profil"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center justify-between px-3.5 py-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl transition"
+                  title="Profil & Pengaturan Akun"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-full bg-brand-50 border border-brand-200 text-brand-700 flex items-center justify-center font-bold text-xs">
+                      <User className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">
+                        {profile?.nama_lengkap || user.email}
+                      </p>
+                      <p className="text-xs text-slate-500">{user.email}</p>
+                    </div>
                   </div>
                   {getRoleBadge(role)}
-                </div>
+                </Link>
                 <button
                   onClick={() => {
                     setMobileMenuOpen(false);

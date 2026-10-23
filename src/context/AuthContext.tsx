@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 
@@ -66,6 +66,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (prof) setProfile(prof);
   }, [user, fetchProfile]);
 
+  const currentUserRef = useRef<User | null>(null);
+  const currentProfileRef = useRef<Profile | null>(null);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -76,10 +79,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } = await supabase.auth.getSession();
 
         if (session?.user && isMounted) {
+          currentUserRef.current = session.user;
           setUser(session.user);
           const prof = await fetchProfile(session.user.id);
-          if (isMounted) setProfile(prof);
+          if (isMounted) {
+            currentProfileRef.current = prof;
+            setProfile(prof);
+          }
         } else if (isMounted) {
+          currentUserRef.current = null;
+          currentProfileRef.current = null;
           setUser(null);
           setProfile(null);
         }
@@ -97,14 +106,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!isMounted) return;
 
-      if (session?.user) {
-        setUser(session.user);
-        const prof = await fetchProfile(session.user.id);
-        if (isMounted) setProfile(prof);
-      } else {
+      if (event === "SIGNED_OUT" || !session?.user) {
+        currentUserRef.current = null;
+        currentProfileRef.current = null;
         setUser(null);
         setProfile(null);
+        setIsLoading(false);
+        return;
       }
+
+      // Jika user ID sama dan profile sudah ada, hindari trigger re-render saat token refresh
+      const isSameUser = currentUserRef.current?.id === session.user.id;
+      if (isSameUser && currentProfileRef.current && (event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION")) {
+        setIsLoading(false);
+        return;
+      }
+
+      currentUserRef.current = session.user;
+      setUser(session.user);
+
+      if (!isSameUser || event === "USER_UPDATED" || !currentProfileRef.current) {
+        const prof = await fetchProfile(session.user.id);
+        if (isMounted) {
+          currentProfileRef.current = prof;
+          setProfile(prof);
+        }
+      }
+
       setIsLoading(false);
     });
 

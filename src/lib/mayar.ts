@@ -23,19 +23,29 @@ export interface MayarInvoiceResponse {
 }
 
 const MAYAR_BASE_URL =
-  process.env.MAYAR_BASE_URL?.replace(/\/$/, "") || "https://api.mayar.id/hl/v1";
+  process.env.MAYAR_BASE_URL?.replace(/\/$/, "") || "https://api.mayar.io/hl/v2";
 const MAYAR_API_KEY = process.env.MAYAR_API_KEY || "";
 
+export function isMayarConfigured(): boolean {
+  const key = (process.env.MAYAR_API_KEY || "").trim();
+  return (
+    key.length > 20 &&
+    !key.includes("your-mayar") &&
+    !key.includes("dummy") &&
+    !key.startsWith("placeholder")
+  );
+}
+
 /**
- * Buat Invoice Pembayaran Mayar Sandbox
+ * Buat Invoice Pembayaran Mayar Sandbox / Production
  */
 export async function createMayarInvoice(
   params: CreateInvoiceParams
 ): Promise<MayarInvoiceResponse> {
-  // Mode Fallback Sandbox Mocking jika API Key belum dipasang
-  if (!MAYAR_API_KEY || MAYAR_API_KEY.includes("your-mayar")) {
+  // Mode Fallback Sandbox Mocking jika API Key belum dipasang / dummy
+  if (!isMayarConfigured()) {
     console.warn(
-      "[Mayar SDK] MAYAR_API_KEY belum dikonfigurasi. Menggunakan mock invoice sandbox untuk pendaftaran:",
+      "[Mayar SDK] MAYAR_API_KEY belum dikonfigurasi atau masih dummy. Menggunakan mock invoice sandbox untuk pendaftaran:",
       params.externalId
     );
     return {
@@ -49,15 +59,31 @@ export async function createMayarInvoice(
 
   const endpoint = `${MAYAR_BASE_URL}/invoices/create`;
 
+  // Sanitasi nomor ponsel (default fallback valid jika kosong atau terlalu pendek)
+  let mobile = (params.customerMobile || "").replace(/[^0-9]/g, "");
+  if (mobile.length < 9) {
+    mobile = "081234567890";
+  }
+
+  // Mayar V2 mewajibkan properti items berupa array
   const payload = {
-    name: params.customerName,
+    name: params.customerName || "Peserta Kursus",
     email: params.customerEmail,
-    mobile: params.customerMobile || "081234567890",
-    amount: params.amount,
+    mobile,
     description: params.description,
     redirectUrl: params.redirectUrl,
     expiredAt: params.expiredAt,
     externalId: params.externalId,
+    extraData: {
+      pendaftaran_id: params.externalId,
+    },
+    items: [
+      {
+        description: params.description,
+        quantity: 1,
+        rate: params.amount,
+      },
+    ],
   };
 
   const response = await fetch(endpoint, {
@@ -81,12 +107,20 @@ export async function createMayarInvoice(
   const resJson = await response.json();
   const data = resJson.data || resJson;
 
+  // Mayar V2 mengembalikan URL pembayaran di paymentUrl atau link
+  const paymentLink =
+    data.paymentUrl ||
+    data.payment_url ||
+    (typeof data.link === "string" && data.link.startsWith("http") ? data.link : undefined) ||
+    data.url ||
+    "";
+
   return {
-    id: data.id || data.invoice_id,
-    link: data.link || data.payment_url || data.url,
-    status: data.status || "UNPAID",
+    id: data.id || data.invoice_id || data.paymentLinkId,
+    link: paymentLink,
+    status: (data.status || "UNPAID").toUpperCase(),
     amount: data.amount || params.amount,
-    externalId: data.externalId || params.externalId,
+    externalId: data.externalId || data.extraData?.pendaftaran_id || params.externalId,
   };
 }
 
@@ -94,7 +128,7 @@ export async function createMayarInvoice(
  * Ambil Detail Invoice Mayar untuk Verifikasi Webhook Anti-Spoofing
  */
 export async function getMayarInvoiceDetail(invoiceId: string): Promise<any> {
-  if (!MAYAR_API_KEY || MAYAR_API_KEY.includes("your-mayar") || invoiceId.startsWith("inv_mock_")) {
+  if (!isMayarConfigured() || invoiceId.startsWith("inv_mock_")) {
     return {
       id: invoiceId,
       status: "PAID",

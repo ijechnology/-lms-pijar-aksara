@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
+import Pagination from "@/components/ui/Pagination";
 import {
   ShieldAlert,
   Search,
@@ -11,18 +12,23 @@ import {
   FileCode,
   AlertCircle,
   Database,
+  User,
 } from "lucide-react";
 
 interface AuditLogItem {
-  id: string;
-  waktu: string;
-  actor_id: string | null;
-  actor_email: string | null;
+  id: string | number;
+  dibuat_pada: string;
+  pelaku_id: string | null;
   aksi: string;
-  tabel_target: string;
-  record_id: string | null;
-  data_lama: any;
-  data_baru: any;
+  nama_tabel: string;
+  id_data: string | null;
+  data_sebelum: any;
+  data_sesudah: any;
+  pelaku: {
+    nama_lengkap: string;
+    email: string;
+    peran: string;
+  } | null;
 }
 
 export default function TabAuditLog() {
@@ -32,6 +38,8 @@ export default function TabAuditLog() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [tableFilter, setTableFilter] = useState<string>("semua");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Modal Detail Payload JSON
   const [detailModalOpen, setDetailModalOpen] = useState(false);
@@ -42,12 +50,15 @@ export default function TabAuditLog() {
     try {
       const { data, error } = await supabase
         .from("audit_log")
-        .select("*")
-        .order("waktu", { ascending: false })
+        .select(`
+          id, pelaku_id, aksi, nama_tabel, id_data, data_sebelum, data_sesudah, dibuat_pada,
+          pelaku:profiles!audit_log_pelaku_id_fkey (nama_lengkap, email, peran)
+        `)
+        .order("dibuat_pada", { ascending: false })
         .limit(100);
 
       if (error) throw error;
-      setLogs(data || []);
+      setLogs((data as any) || []);
     } catch (err) {
       console.error("Gagal memuat audit log:", err);
     } finally {
@@ -60,6 +71,7 @@ export default function TabAuditLog() {
   }, [loadLogs]);
 
   const formatDate = (iso: string) => {
+    if (!iso) return "-";
     return new Date(iso).toLocaleDateString("id-ID", {
       day: "numeric",
       month: "short",
@@ -71,15 +83,28 @@ export default function TabAuditLog() {
   };
 
   const filteredLogs = logs.filter((l) => {
+    const actorEmail = l.pelaku?.email || "";
+    const actorName = l.pelaku?.nama_lengkap || "";
     const matchSearch =
       l.aksi.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (l.actor_email || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-      l.tabel_target.toLowerCase().includes(searchQuery.toLowerCase());
+      actorEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      actorName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      l.nama_tabel.toLowerCase().includes(searchQuery.toLowerCase());
 
     if (!matchSearch) return false;
-    if (tableFilter !== "semua" && l.tabel_target !== tableFilter) return false;
+    if (tableFilter !== "semua" && l.nama_tabel !== tableFilter) return false;
     return true;
   });
+
+  // Reset pagination saat search/filter berubah
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, tableFilter]);
+
+  const paginatedLogs = filteredLogs.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   return (
     <div className="space-y-6">
@@ -111,7 +136,7 @@ export default function TabAuditLog() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Cari aksi, email pelaku, tabel..."
+            placeholder="Cari aksi, nama/email pelaku, tabel..."
             className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
           />
         </div>
@@ -127,6 +152,7 @@ export default function TabAuditLog() {
             <option value="kursus">Tabel Kursus</option>
             <option value="pendaftaran">Tabel Pendaftaran</option>
             <option value="profiles">Tabel Profil Pengguna</option>
+            <option value="modul">Tabel Modul</option>
           </select>
         </div>
       </div>
@@ -156,32 +182,35 @@ export default function TabAuditLog() {
                   <th className="px-5 py-4 text-right">Data Payload</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 font-mono text-xs">
-                {filteredLogs.map((log) => (
+              <tbody className="divide-y divide-slate-200 text-xs">
+                {paginatedLogs.map((log) => (
                   <tr key={log.id} className="hover:bg-slate-50/80 transition">
                     {/* Waktu */}
                     <td className="px-5 py-4 text-slate-600 whitespace-nowrap">
-                      {formatDate(log.waktu)}
+                      {formatDate(log.dibuat_pada)}
                     </td>
 
                     {/* Pelaku */}
                     <td className="px-4 py-4 font-sans font-medium text-slate-900">
-                      {log.actor_email || "Sistem"}
+                      <div>{log.pelaku?.nama_lengkap || "Sistem"}</div>
+                      {log.pelaku?.email && (
+                        <div className="text-[11px] text-slate-400 font-normal">{log.pelaku.email}</div>
+                      )}
                     </td>
 
                     {/* Aksi */}
                     <td className="px-4 py-4 whitespace-nowrap">
-                      <span className="px-2 py-0.5 rounded font-bold bg-slate-100 text-slate-800 border border-slate-200">
+                      <span className="px-2 py-0.5 rounded font-mono font-bold bg-slate-100 text-slate-800 border border-slate-200">
                         {log.aksi}
                       </span>
                     </td>
 
                     {/* Tabel */}
-                    <td className="px-4 py-4 text-slate-600">{log.tabel_target}</td>
+                    <td className="px-4 py-4 text-slate-600 font-mono">{log.nama_tabel}</td>
 
                     {/* Record ID */}
-                    <td className="px-4 py-4 text-slate-400 truncate max-w-[120px]">
-                      {log.record_id || "-"}
+                    <td className="px-4 py-4 text-slate-400 font-mono truncate max-w-[120px]">
+                      {log.id_data || "-"}
                     </td>
 
                     {/* Aksi Lihat Payload */}
@@ -201,6 +230,16 @@ export default function TabAuditLog() {
               </tbody>
             </table>
           </div>
+        )}
+
+        {/* Pagination */}
+        {!loading && (
+          <Pagination
+            currentPage={currentPage}
+            totalItems={filteredLogs.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+          />
         )}
       </div>
 
@@ -228,45 +267,47 @@ export default function TabAuditLog() {
                 <div>
                   <span className="text-slate-400 block">Waktu:</span>
                   <span className="font-semibold text-slate-700">
-                    {formatDate(selectedLog.waktu)}
+                    {formatDate(selectedLog.dibuat_pada)}
                   </span>
                 </div>
                 <div>
                   <span className="text-slate-400 block">Pelaku:</span>
                   <span className="font-semibold text-slate-700">
-                    {selectedLog.actor_email || "Sistem"}
+                    {selectedLog.pelaku?.nama_lengkap || "Sistem"} ({selectedLog.pelaku?.email || "otomatis"})
                   </span>
                 </div>
                 <div>
                   <span className="text-slate-400 block">Tabel Target:</span>
                   <span className="font-semibold text-slate-700">
-                    {selectedLog.tabel_target}
+                    {selectedLog.nama_tabel}
                   </span>
                 </div>
                 <div>
                   <span className="text-slate-400 block">Record ID:</span>
                   <span className="font-mono text-slate-700 truncate block">
-                    {selectedLog.record_id || "-"}
+                    {selectedLog.id_data || "-"}
                   </span>
                 </div>
               </div>
 
-              <div>
-                <span className="font-bold text-slate-700 block mb-1">
-                  Data Baru / Parameter (data_baru):
-                </span>
-                <pre className="p-3 bg-slate-900 text-emerald-400 rounded-xl overflow-x-auto text-[11px] font-mono leading-relaxed max-h-56">
-                  {JSON.stringify(selectedLog.data_baru, null, 2) || "null"}
-                </pre>
-              </div>
-
-              {selectedLog.data_lama && (
+              {selectedLog.data_sebelum && (
                 <div>
                   <span className="font-bold text-slate-700 block mb-1">
-                    Data Lama (data_lama):
+                    Data Sebelum (State Lama):
                   </span>
-                  <pre className="p-3 bg-slate-900 text-rose-300 rounded-xl overflow-x-auto text-[11px] font-mono leading-relaxed max-h-56">
-                    {JSON.stringify(selectedLog.data_lama, null, 2)}
+                  <pre className="p-3 bg-slate-900 text-slate-200 rounded-xl overflow-x-auto text-[11px] font-mono max-h-36">
+                    {JSON.stringify(selectedLog.data_sebelum, null, 2)}
+                  </pre>
+                </div>
+              )}
+
+              {selectedLog.data_sesudah && (
+                <div>
+                  <span className="font-bold text-slate-700 block mb-1">
+                    Data Sesudah (State Baru / Payload):
+                  </span>
+                  <pre className="p-3 bg-slate-900 text-emerald-400 rounded-xl overflow-x-auto text-[11px] font-mono max-h-36">
+                    {JSON.stringify(selectedLog.data_sesudah, null, 2)}
                   </pre>
                 </div>
               )}
@@ -274,6 +315,7 @@ export default function TabAuditLog() {
 
             <div className="pt-3 border-t border-slate-200 flex justify-end">
               <button
+                type="button"
                 onClick={() => setDetailModalOpen(false)}
                 className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800"
               >

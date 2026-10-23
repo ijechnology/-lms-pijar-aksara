@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Plus, Edit2, Trash2, HelpCircle, Lock, AlertCircle, CheckCircle2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import ConfirmModal from "@/components/ui/ConfirmModal";
+import AlertModal from "@/components/ui/AlertModal";
 
 export interface SoalData {
   id: string;
@@ -148,17 +150,40 @@ export default function EditorSoal({
     }
   };
 
-  const handleDelete = async (id: string, urutan: number) => {
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; urutan: number } | null>(null);
+  const [alertModal, setAlertModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: "info" | "error" | "success";
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "info",
+  });
+
+  const confirmDelete = (id: string, urutan: number) => {
     if (isLocked) return;
-    if (!confirm(`Hapus soal nomor ${urutan}?`)) return;
+    setDeleteTarget({ id, urutan });
+  };
+
+  const executeDelete = async () => {
+    if (!deleteTarget) return;
 
     try {
-      const { error } = await supabase.from("soal").delete().eq("id", id);
+      const { error } = await supabase.from("soal").delete().eq("id", deleteTarget.id);
       if (error) throw error;
+      setDeleteTarget(null);
       await loadSoal();
       if (onSoalCountChanged) onSoalCountChanged();
     } catch (err: unknown) {
-      alert("Gagal menghapus soal: " + (err instanceof Error ? err.message : String(err)));
+      setAlertModal({
+        isOpen: true,
+        title: "Gagal Menghapus Soal",
+        message: err instanceof Error ? err.message : String(err),
+        type: "error",
+      });
     }
   };
 
@@ -237,7 +262,7 @@ export default function EditorSoal({
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
                     <button
-                      onClick={() => handleDelete(s.id, s.urutan)}
+                      onClick={() => confirmDelete(s.id, s.urutan)}
                       className="p-1 rounded-md text-slate-500 hover:text-rose-600 hover:bg-rose-50"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -382,6 +407,27 @@ export default function EditorSoal({
           </div>
         </div>
       )}
+
+      {/* Modal Konfirmasi Hapus Soal */}
+      <ConfirmModal
+        isOpen={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={executeDelete}
+        title="Hapus Butir Soal?"
+        message={`Apakah Anda yakin ingin menghapus butir soal kuis nomor ${deleteTarget?.urutan}? Tindakan ini tidak dapat dibatalkan.`}
+        confirmLabel="Ya, Hapus Soal"
+        cancelLabel="Batal"
+        variant="danger"
+      />
+
+      {/* Modal Notifikasi */}
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal((prev) => ({ ...prev, isOpen: false }))}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+      />
     </div>
   );
 }

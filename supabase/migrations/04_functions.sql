@@ -78,12 +78,25 @@ BEGIN
         RAISE EXCEPTION 'Kursus berbayar tidak dapat menggunakan metode pembayaran gratis.';
     END IF;
 
-    -- Validasi INV-02: Satu peserta hanya boleh memiliki 1 pendaftaran berlaku per kursus
+    -- Otomatis tandai kedaluwarsa jika ada pendaftaran menunggu_bayar yang telah melewati batas bayar (BR-05, BR-07)
+    UPDATE public.pendaftaran
+    SET status = 'kedaluwarsa'
+    WHERE kursus_id = p_kursus_id
+      AND peserta_id = v_user_id
+      AND status = 'menunggu_bayar'
+      AND batas_bayar IS NOT NULL
+      AND batas_bayar <= NOW();
+
+    -- Validasi INV-02 & BR-05: Satu peserta hanya boleh memiliki 1 pendaftaran yang sedang berlaku
+    -- Pendaftaran berlaku = status 'aktif', 'selesai', atau 'menunggu_bayar' dengan batas_bayar > NOW()
     SELECT EXISTS (
         SELECT 1 FROM public.pendaftaran
         WHERE kursus_id = p_kursus_id
           AND peserta_id = v_user_id
-          AND status IN ('menunggu_bayar', 'aktif', 'selesai')
+          AND (
+            status IN ('aktif', 'selesai')
+            OR (status = 'menunggu_bayar' AND (batas_bayar IS NULL OR batas_bayar > NOW()))
+          )
     ) INTO v_ada_pendaftaran;
 
     IF v_ada_pendaftaran THEN
@@ -315,11 +328,10 @@ BEGIN
         RAISE EXCEPTION 'Modul ini sudah berstatus lulus dan tidak dapat diuji ulang.';
     END IF;
 
-    -- 6. Cek kuota percobaan kuis (Maksimal 3x) dengan penguncian (INV-04, BR-10)
+    -- 6. Cek kuota percobaan kuis (Maksimal 3x) (INV-04, BR-10)
     SELECT COUNT(*) INTO v_jumlah_percobaan
     FROM public.percobaan_kuis
-    WHERE pendaftaran_id = p_pendaftaran_id AND modul_id = p_modul_id
-    FOR UPDATE;
+    WHERE pendaftaran_id = p_pendaftaran_id AND modul_id = p_modul_id;
 
     IF v_jumlah_percobaan >= 3 THEN
         RAISE EXCEPTION 'Batas maksimal 3 kali percobaan kuis untuk modul ini telah habis.';
@@ -603,7 +615,7 @@ BEGIN
             catatan_tinjauan = NULL
         WHERE id = p_kursus_id;
 
-    ELSIF p_keputusan = 'draf' THEN
+    ELSIF p_keputusan = 'draf' OR p_keputusan = 'tolak' THEN
         IF p_catatan IS NULL OR char_length(TRIM(p_catatan)) < 10 THEN
             RAISE EXCEPTION 'Pengembalian kursus ke draf wajib menyertakan alasan minimal 10 karakter.';
         END IF;
@@ -615,7 +627,7 @@ BEGIN
         WHERE id = p_kursus_id;
 
     ELSE
-        RAISE EXCEPTION 'Keputusan tidak valid. Pilihan: "terbit" atau "draf".';
+        RAISE EXCEPTION 'Keputusan tidak valid. Pilihan: "terbit", "draf", atau "tolak".';
     END IF;
 
     -- Catat ke audit log

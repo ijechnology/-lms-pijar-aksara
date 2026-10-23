@@ -1,7 +1,10 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import ConfirmModal from "@/components/ui/ConfirmModal";
+import Pagination from "@/components/ui/Pagination";
 import {
   BookOpen,
   CheckCircle2,
@@ -15,6 +18,7 @@ import {
   Award,
   Clock,
   Sparkles,
+  ExternalLink,
 } from "lucide-react";
 
 interface KursusTinjauanItem {
@@ -50,6 +54,15 @@ export default function TabTinjauanKursus() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("semua");
+
+  // Modal Konfirmasi Terbit, Tutup, & Buka Kembali
+  const [approveTargetKursus, setApproveTargetKursus] = useState<KursusTinjauanItem | null>(null);
+  const [closeTargetKursus, setCloseTargetKursus] = useState<KursusTinjauanItem | null>(null);
+  const [reopenTargetKursus, setReopenTargetKursus] = useState<KursusTinjauanItem | null>(null);
+
+  // Pagination (Seragam 10 data per halaman)
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Modal Penolakan (BR-04: Wajib alasan >= 10 karakter)
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
@@ -92,23 +105,21 @@ export default function TabTinjauanKursus() {
     loadKursus();
   }, [loadKursus]);
 
-  // Aksi Moderasi
-  const handleSetujuiTerbit = async (kursus: KursusTinjauanItem) => {
-    const confirmApprove = window.confirm(
-      `Apakah Anda yakin ingin menyetujui dan menerbitkan kursus "${kursus.judul}" ke katalog publik?`
-    );
-    if (!confirmApprove) return;
+  // Aksi Moderasi Terbitkan
+  const handleSetujuiTerbit = async () => {
+    if (!approveTargetKursus) return;
 
     setProcessing(true);
     setActionError(null);
     try {
       const { data, error } = await supabase.rpc("putuskan_tinjauan_kursus", {
-        p_kursus_id: kursus.id,
+        p_kursus_id: approveTargetKursus.id,
         p_keputusan: "terbit",
         p_catatan: null,
       });
 
       if (error) throw error;
+      setApproveTargetKursus(null);
       await loadKursus();
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Gagal menerbitkan kursus.");
@@ -145,25 +156,43 @@ export default function TabTinjauanKursus() {
     }
   };
 
-  const handleTutupKursus = async (kursus: KursusTinjauanItem) => {
-    const confirmClose = window.confirm(
-      `Tutup kursus "${kursus.judul}" dari katalog publik? Peserta baru tidak dapat mendaftar lagi.`
-    );
-    if (!confirmClose) return;
+  const handleTutupKursus = async () => {
+    if (!closeTargetKursus) return;
 
     setProcessing(true);
     setActionError(null);
     try {
-      const { data, error } = await supabase.rpc("putuskan_tinjauan_kursus", {
-        p_kursus_id: kursus.id,
-        p_keputusan: "tutup",
-        p_catatan: null,
-      });
+      const { error } = await supabase
+        .from("kursus")
+        .update({ status: "ditutup" })
+        .eq("id", closeTargetKursus.id);
 
       if (error) throw error;
+      setCloseTargetKursus(null);
       await loadKursus();
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Gagal menutup kursus.");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleBukaKembaliKursus = async () => {
+    if (!reopenTargetKursus) return;
+
+    setProcessing(true);
+    setActionError(null);
+    try {
+      const { error } = await supabase
+        .from("kursus")
+        .update({ status: "terbit" })
+        .eq("id", reopenTargetKursus.id);
+
+      if (error) throw error;
+      setReopenTargetKursus(null);
+      await loadKursus();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Gagal membuka kembali kursus.");
     } finally {
       setProcessing(false);
     }
@@ -188,6 +217,16 @@ export default function TabTinjauanKursus() {
     if (statusFilter !== "semua" && k.status !== statusFilter) return false;
     return true;
   });
+
+  // Reset pagination saat filter/search berubah
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter]);
+
+  const paginatedKursus = filteredKursus.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   const getStatusBadge = (st: string) => {
     switch (st) {
@@ -276,16 +315,17 @@ export default function TabTinjauanKursus() {
             <table className="w-full text-left text-sm text-slate-700">
               <thead className="bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200">
                 <tr>
-                  <th className="px-5 py-4">Kursus & Instruktur</th>
-                  <th className="px-4 py-4">Kategori</th>
-                  <th className="px-4 py-4">Harga / Kuota</th>
-                  <th className="px-4 py-4">Kurikulum</th>
-                  <th className="px-4 py-4">Status</th>
-                  <th className="px-5 py-4 text-right">Aksi Moderasi</th>
+                  <th className="px-5 py-4">Kursus</th>
+                  <th className="px-4 py-4">Instruktur</th>
+                  <th className="px-4 py-4 whitespace-nowrap">Kategori</th>
+                  <th className="px-4 py-4 whitespace-nowrap">Biaya / Kuota</th>
+                  <th className="px-4 py-4 whitespace-nowrap">Kurikulum</th>
+                  <th className="px-4 py-4 whitespace-nowrap">Status</th>
+                  <th className="px-5 py-4 text-right whitespace-nowrap">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {filteredKursus.map((k) => {
+                {paginatedKursus.map((k) => {
                   const moduls = k.modul || [];
                   let totalSoal = 0;
                   moduls.forEach((m) => {
@@ -294,15 +334,20 @@ export default function TabTinjauanKursus() {
 
                   return (
                     <tr key={k.id} className="hover:bg-slate-50/80 transition">
-                      {/* Judul & Instruktur */}
-                      <td className="px-5 py-4">
-                        <div className="font-bold text-slate-900">{k.judul}</div>
-                        <div className="text-xs text-slate-500 mt-0.5">
-                          Instruktur:{" "}
-                          <span className="font-medium text-slate-700">
-                            {k.instruktur?.nama_lengkap || "Tanpa Nama"}
-                          </span>{" "}
-                          ({k.instruktur?.email || "-"})
+                      {/* Kursus (Terpisah dari Instruktur) */}
+                      <td className="px-5 py-4 max-w-xs">
+                        <button
+                          onClick={() => {
+                            setPreviewTargetKursus(k);
+                            setPreviewModalOpen(true);
+                          }}
+                          className="font-bold text-slate-900 hover:text-brand-600 text-left transition block line-clamp-2"
+                          title="Klik untuk melihat detail & kurikulum"
+                        >
+                          {k.judul}
+                        </button>
+                        <div className="text-[11px] text-slate-400 mt-0.5 font-mono">
+                          /{k.slug}
                         </div>
                         {k.catatan_tinjauan && (
                           <div className="text-xs text-amber-800 bg-amber-50 p-1.5 rounded mt-1.5 border border-amber-200">
@@ -311,25 +356,35 @@ export default function TabTinjauanKursus() {
                         )}
                       </td>
 
-                      {/* Kategori */}
-                      <td className="px-4 py-4">
-                        <span className="px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-700">
+                      {/* Instruktur (Kolom Terpisah) */}
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <div className="font-semibold text-slate-800 text-xs">
+                          {k.instruktur?.nama_lengkap || "Tanpa Nama"}
+                        </div>
+                        <div className="text-[11px] text-slate-400 font-sans">
+                          {k.instruktur?.email || "-"}
+                        </div>
+                      </td>
+
+                      {/* Kategori - whitespace-nowrap agar rapi dan tidak tertekuk */}
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <span className="px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-100 text-slate-700 whitespace-nowrap inline-block border border-slate-200/60">
                           {k.kategori}
                         </span>
                       </td>
 
-                      {/* Harga / Kuota */}
-                      <td className="px-4 py-4">
-                        <div className="font-bold text-slate-900">
+                      {/* Biaya / Kuota */}
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <div className="font-bold text-slate-900 text-xs">
                           {k.harga === 0 ? "Gratis" : formatRupiah(k.harga)}
                         </div>
-                        <div className="text-xs text-slate-500">Kuota: {k.kuota} kursi</div>
+                        <div className="text-[11px] text-slate-500">Kuota: {k.kuota} kursi</div>
                       </td>
 
                       {/* Kurikulum */}
-                      <td className="px-4 py-4">
+                      <td className="px-4 py-4 whitespace-nowrap">
                         <div className="text-xs font-medium text-slate-800">
-                          {moduls.length} Modul | {totalSoal} Soal
+                          {moduls.length} Modul · {totalSoal} Soal
                         </div>
                         <div className="text-[11px] text-slate-400">
                           Passing Grade: {k.nilai_lulus}%
@@ -339,28 +394,17 @@ export default function TabTinjauanKursus() {
                       {/* Status */}
                       <td className="px-4 py-4 whitespace-nowrap">{getStatusBadge(k.status)}</td>
 
-                      {/* Aksi */}
+                      {/* Aksi - Bersih, rapi, dan tidak menumpuk padat */}
                       <td className="px-5 py-4 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-2">
-                          {/* Pratinjau Silabus */}
-                          <button
-                            onClick={() => {
-                              setPreviewTargetKursus(k);
-                              setPreviewModalOpen(true);
-                            }}
-                            className="p-1.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100 transition"
-                            title="Pratinjau Kurikulum"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-
+                        <div className="flex items-center justify-end gap-1.5">
                           {/* Jika Ditinjau: Setujui / Tolak */}
                           {k.status === "ditinjau" && (
                             <>
                               <button
-                                onClick={() => handleSetujuiTerbit(k)}
+                                onClick={() => setApproveTargetKursus(k)}
                                 disabled={processing}
-                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-sm"
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-xs"
+                                title="Terbitkan kursus ke katalog"
                               >
                                 <CheckCircle2 className="w-3.5 h-3.5" /> Terbitkan
                               </button>
@@ -373,7 +417,8 @@ export default function TabTinjauanKursus() {
                                   setRejectModalOpen(true);
                                 }}
                                 disabled={processing}
-                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition shadow-sm"
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition shadow-xs"
+                                title="Tolak dengan catatan perbaikan"
                               >
                                 <XCircle className="w-3.5 h-3.5" /> Tolak
                               </button>
@@ -383,13 +428,38 @@ export default function TabTinjauanKursus() {
                           {/* Jika Terbit: Tutup */}
                           {k.status === "terbit" && (
                             <button
-                              onClick={() => handleTutupKursus(k)}
+                              onClick={() => setCloseTargetKursus(k)}
                               disabled={processing}
                               className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs font-bold transition"
+                              title="Tutup kursus dari pendaftaran publik"
                             >
-                              <Lock className="w-3.5 h-3.5" /> Tutup Kursus
+                              <Lock className="w-3.5 h-3.5" /> Tutup
                             </button>
                           )}
+
+                          {/* Jika Ditutup: Buka Kembali */}
+                          {k.status === "ditutup" && (
+                            <button
+                              onClick={() => setReopenTargetKursus(k)}
+                              disabled={processing}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-bold transition"
+                              title="Buka kembali pendaftaran kursus"
+                            >
+                              <Sparkles className="w-3.5 h-3.5" /> Buka Kembali
+                            </button>
+                          )}
+
+                          {/* Detail & Pratinjau Modal */}
+                          <button
+                            onClick={() => {
+                              setPreviewTargetKursus(k);
+                              setPreviewModalOpen(true);
+                            }}
+                            className="p-1.5 rounded-lg border border-slate-200 text-slate-700 bg-white hover:bg-slate-100 transition shadow-2xs"
+                            title="Lihat Detail & Kurikulum Lengkap"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -399,12 +469,28 @@ export default function TabTinjauanKursus() {
             </table>
           </div>
         )}
+
+        {/* Pagination */}
+        {!loading && (
+          <Pagination
+            currentPage={currentPage}
+            totalItems={filteredKursus.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+          />
+        )}
       </div>
 
       {/* Modal Penolakan (BR-04: Alasan Wajib >= 10 Karakter) */}
       {rejectModalOpen && rejectTargetKursus && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+          {/* Backdrop overlay dengan blur sempurna */}
+          <div
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-md transition-opacity"
+            aria-hidden="true"
+            onClick={() => !processing && setRejectModalOpen(false)}
+          />
+          <div className="relative z-10 bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center flex-shrink-0">
                 <XCircle className="w-6 h-6" />
@@ -463,8 +549,14 @@ export default function TabTinjauanKursus() {
 
       {/* Modal Pratinjau Kurikulum */}
       {previewModalOpen && previewTargetKursus && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+          {/* Backdrop overlay dengan blur sempurna */}
+          <div
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-md transition-opacity"
+            aria-hidden="true"
+            onClick={() => setPreviewModalOpen(false)}
+          />
+          <div className="relative z-10 bg-white rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col p-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-4">
               <div>
                 <span className="px-2.5 py-0.5 rounded-md text-xs font-semibold bg-brand-50 text-brand-700">
@@ -519,17 +611,85 @@ export default function TabTinjauanKursus() {
               </div>
             </div>
 
-            <div className="pt-4 border-t border-slate-200 flex justify-end">
+            {/* Footer Modal: Tombol Navigasi Komprehensif */}
+            <div className="pt-4 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Link
+                  href={`/instruktur/kursus/${previewTargetKursus.id}`}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold transition shadow-xs"
+                >
+                  <BookOpen className="w-3.5 h-3.5" /> Buka Kurikulum Lengkap
+                </Link>
+
+                {(previewTargetKursus.status === "terbit" || previewTargetKursus.status === "ditutup") && (
+                  <Link
+                    href={`/instruktur/kursus/${previewTargetKursus.id}/peserta?from=admin`}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-xs font-semibold transition"
+                  >
+                    <Users className="w-3.5 h-3.5" /> Rekap Nilai Peserta
+                  </Link>
+                )}
+
+                {previewTargetKursus.status === "terbit" && (
+                  <Link
+                    href={`/kursus/${previewTargetKursus.slug}`}
+                    target="_blank"
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-semibold transition"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" /> Buka Halaman Publik
+                  </Link>
+                )}
+              </div>
+
               <button
                 onClick={() => setPreviewModalOpen(false)}
-                className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800"
+                className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 text-xs font-bold transition"
               >
-                Tutup Pratinjau
+                Tutup
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Modal Konfirmasi Terbitkan Kursus */}
+      <ConfirmModal
+        isOpen={approveTargetKursus !== null}
+        onClose={() => setApproveTargetKursus(null)}
+        onConfirm={handleSetujuiTerbit}
+        title="Terbitkan Kursus ke Katalog Publik?"
+        message={`Apakah Anda yakin ingin menyetujui dan menerbitkan kursus "${approveTargetKursus?.judul}"? Peserta akan langsung dapat melihat dan mendaftar ke kursus ini.`}
+        confirmLabel="Ya, Terbitkan"
+        cancelLabel="Batal"
+        variant="success"
+        loading={processing}
+      />
+
+      {/* Modal Konfirmasi Tutup Kursus */}
+      <ConfirmModal
+        isOpen={closeTargetKursus !== null}
+        onClose={() => setCloseTargetKursus(null)}
+        onConfirm={handleTutupKursus}
+        title="Tutup Kursus dari Katalog Publik?"
+        message={`Tutup kursus "${closeTargetKursus?.judul}" dari katalog publik? Peserta baru tidak dapat mendaftar lagi, namun peserta yang sudah terdaftar tetap dapat mengakses materi.`}
+        confirmLabel="Ya, Tutup Kursus"
+        cancelLabel="Batal"
+        variant="danger"
+        loading={processing}
+      />
+
+      {/* Modal Konfirmasi Buka Kembali Kursus */}
+      <ConfirmModal
+        isOpen={reopenTargetKursus !== null}
+        onClose={() => setReopenTargetKursus(null)}
+        onConfirm={handleBukaKembaliKursus}
+        title="Buka Kembali Kursus ke Katalog Publik?"
+        message={`Buka kembali kursus "${reopenTargetKursus?.judul}" ke katalog publik? Calon peserta dapat kembali mendaftar ke kursus ini.`}
+        confirmLabel="Ya, Buka Kembali"
+        cancelLabel="Batal"
+        variant="success"
+        loading={processing}
+      />
     </div>
   );
 }

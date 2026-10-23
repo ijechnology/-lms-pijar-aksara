@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { createClient } from "@/lib/supabase/client";
+import AlertModal from "@/components/ui/AlertModal";
 import {
   CreditCard,
   CheckCircle2,
@@ -40,6 +41,17 @@ export default function TombolDaftarKursus({
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successData, setSuccessData] = useState<any | null>(null);
+  const [alertModal, setAlertModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: "info" | "error" | "success";
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "info",
+  });
 
   // Periksa apakah peserta sudah terdaftar di kursus ini
   useEffect(() => {
@@ -53,10 +65,23 @@ export default function TombolDaftarKursus({
           .eq("kursus_id", kursusId)
           .eq("peserta_id", user.id)
           .in("status", ["menunggu_bayar", "aktif", "selesai"])
+          .order("didaftarkan_pada", { ascending: false })
+          .limit(1)
           .maybeSingle();
 
         if (data) {
-          setExistingPendaftaran(data);
+          // BR-05 & BR-07: Cek apakah pendaftaran menunggu_bayar telah lewat batas waktu (kedaluwarsa)
+          const isExpired =
+            data.status === "menunggu_bayar" &&
+            data.batas_bayar &&
+            new Date(data.batas_bayar) <= new Date();
+
+          if (!isExpired) {
+            setExistingPendaftaran(data);
+          } else {
+            // Sesuai BR-05: Peserta boleh mendaftar lagi bila pendaftaran sebelumnya kedaluwarsa
+            setExistingPendaftaran(null);
+          }
         }
       } catch (err) {
         console.warn("Gagal cek pendaftaran:", err);
@@ -74,7 +99,12 @@ export default function TombolDaftarKursus({
       return;
     }
     if (role !== "peserta") {
-      alert("Hanya akun dengan peran Peserta yang dapat mendaftar kursus.");
+      setAlertModal({
+        isOpen: true,
+        title: "Peran Tidak Sesuai",
+        message: "Hanya akun dengan peran Peserta yang dapat mendaftar kursus.",
+        type: "info",
+      });
       return;
     }
     setIsModalOpen(true);
@@ -108,8 +138,9 @@ export default function TombolDaftarKursus({
             body: JSON.stringify({ pendaftaran_id: data.pendaftaran_id }),
           });
           const mayarResult = await res.json();
-          if (mayarResult?.payment_url) {
-            window.location.href = mayarResult.payment_url;
+          const paymentLink = mayarResult?.paymentUrl || mayarResult?.payment_url;
+          if (paymentLink) {
+            window.location.href = paymentLink;
             return;
           }
         } catch (mErr) {
@@ -135,6 +166,20 @@ export default function TombolDaftarKursus({
       >
         Kuota Kursus Penuh
       </button>
+    );
+  }
+
+  if (user && role !== "peserta") {
+    return (
+      <div className="p-4 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-700 space-y-1">
+        <div className="font-bold flex items-center gap-1.5 text-slate-800">
+          <ShieldCheck className="w-4 h-4 text-brand-600" />
+          <span>Akun {role === "admin" ? "Admin" : "Instruktur"}</span>
+        </div>
+        <p className="text-[11px] text-slate-500 leading-relaxed">
+          Sesuai aturan sistem (BR-05), hanya akun berperan <strong>Peserta</strong> yang dapat mendaftar kursus.
+        </p>
+      </div>
     );
   }
 
@@ -299,6 +344,15 @@ export default function TombolDaftarKursus({
           </div>
         </div>
       )}
+
+      {/* Modal Alert */}
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal((prev) => ({ ...prev, isOpen: false }))}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+      />
     </>
   );
 }

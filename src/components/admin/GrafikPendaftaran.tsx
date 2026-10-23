@@ -8,6 +8,7 @@ import {
   XAxis,
   YAxis,
   Tooltip,
+  Legend,
   CartesianGrid,
 } from "recharts";
 
@@ -53,11 +54,19 @@ export default function GrafikPendaftaran({ data }: GrafikPendaftaranProps) {
             }}
             formatter={(value: any, name: any) => [
               `${value} peserta`,
-              name === "total" ? "Total Pendaftar" : "Pendaftar Aktif",
+              name === "total" || name === "Total Pendaftar"
+                ? "Total Pendaftar"
+                : "Peserta Aktif (Lunas)",
             ]}
           />
+          <Legend
+            verticalAlign="top"
+            align="right"
+            iconType="circle"
+            wrapperStyle={{ fontSize: "11px", paddingBottom: "8px" }}
+          />
           <Bar dataKey="total" fill="#93C5FD" radius={[4, 4, 0, 0]} name="Total Pendaftar" />
-          <Bar dataKey="aktif" fill="#2563EB" radius={[4, 4, 0, 0]} name="Pendaftar Aktif" />
+          <Bar dataKey="aktif" fill="#2563EB" radius={[4, 4, 0, 0]} name="Peserta Aktif (Lunas)" />
         </BarChart>
       </ResponsiveContainer>
     </div>

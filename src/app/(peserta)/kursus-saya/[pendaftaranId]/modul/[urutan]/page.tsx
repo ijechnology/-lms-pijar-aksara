@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
@@ -20,6 +20,8 @@ import {
   AlertCircle,
   HelpCircle,
   ExternalLink,
+  Award,
+  Sparkles,
 } from "lucide-react";
 
 export default function RuangBelajarPage() {
@@ -42,10 +44,13 @@ export default function RuangBelajarPage() {
 
   const [markingRead, setMarkingRead] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const dataLoadedRef = useRef(false);
 
   const loadData = useCallback(async () => {
     if (!user) return;
-    setLoading(true);
+    if (!dataLoadedRef.current) {
+      setLoading(true);
+    }
     setErrorMsg(null);
 
     try {
@@ -137,9 +142,10 @@ export default function RuangBelajarPage() {
       const msg = err instanceof Error ? err.message : "Terjadi kesalahan.";
       setErrorMsg(msg);
     } finally {
+      dataLoadedRef.current = true;
       setLoading(false);
     }
-  }, [user, pendaftaranId, currentUrutan, supabase]);
+  }, [user?.id, pendaftaranId, currentUrutan, supabase]);
 
   useEffect(() => {
     loadData();
@@ -195,15 +201,23 @@ export default function RuangBelajarPage() {
     }
   };
 
-  // Format link YouTube ke embed jika perlu
+  // Format link YouTube ke embed secara robust
   const getEmbedUrl = (url: string) => {
     if (!url) return null;
-    if (url.includes("embed/")) return url;
-    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
-    return match ? `https://www.youtube.com/embed/${match[1]}` : url;
+    if (url.includes("youtube.com/embed/")) return url;
+    // Deteksi ID dari berbagai variasi URL YouTube (youtu.be, watch?v=, dsb)
+    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{6,15})/);
+    if (match) {
+      return `https://www.youtube.com/embed/${match[1]}?rel=0&enablejsapi=1`;
+    }
+    return url;
   };
 
   const activeStatus = modulList.find((m) => m.urutan === currentUrutan);
+  const isAllModulLulus = modulList.length > 0 && modulList.every((m) => m.isLulus);
+  const isCourseCompleted = pendaftaran?.status === "selesai" || isAllModulLulus;
+  const isFinalModul = currentUrutan === modulList.length;
+  const nextUrutan = currentUrutan < modulList.length ? currentUrutan + 1 : null;
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
@@ -221,10 +235,43 @@ export default function RuangBelajarPage() {
               {kursus?.judul || "Ruang Belajar"}
             </span>
           </nav>
+
+          {isCourseCompleted && (
+            <Link
+              href={`/kursus-saya/${pendaftaranId}/sertifikat`}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition"
+            >
+              <Award className="w-3.5 h-3.5" /> Lihat Sertifikat
+            </Link>
+          )}
         </div>
       </div>
 
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        {isCourseCompleted && (
+          <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 text-white shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in duration-300">
+            <div className="flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-xl bg-white/15 backdrop-blur-xs flex items-center justify-center flex-shrink-0">
+                <Sparkles className="w-6 h-6 text-amber-300" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-sm sm:text-base tracking-tight">
+                  Selamat! Anda Telah Menyelesaikan Seluruh Modul Kursus Ini
+                </h3>
+                <p className="text-xs text-emerald-100">
+                  Seluruh kurikulum pembelajaran telah tuntas. Sertifikat kelulusan digital resmi Anda telah terbit.
+                </p>
+              </div>
+            </div>
+            <Link
+              href={`/kursus-saya/${pendaftaranId}/sertifikat`}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white text-emerald-800 font-extrabold text-xs shadow-md hover:bg-emerald-50 transition flex-shrink-0"
+            >
+              <Award className="w-4 h-4 text-emerald-700" /> Buka &amp; Cetak Sertifikat
+            </Link>
+          </div>
+        )}
+
         {loading || isLoading ? (
           <div className="py-24 text-center text-slate-400 space-y-3">
             <div className="w-8 h-8 border-3 border-brand-200 border-t-brand-600 rounded-full animate-spin mx-auto" />
@@ -294,15 +341,29 @@ export default function RuangBelajarPage() {
 
                     {/* Sematan Video Jika Ada */}
                     {currentModul.video_url && (
-                      <div className="pt-2">
-                        <div className="aspect-video w-full rounded-2xl overflow-hidden shadow-md bg-slate-900">
+                      <div className="pt-2 space-y-2">
+                        <div className="aspect-video w-full rounded-2xl overflow-hidden shadow-md bg-slate-900 relative">
                           <iframe
                             src={getEmbedUrl(currentModul.video_url)!}
                             title={currentModul.judul}
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                             allowFullScreen
+                            referrerPolicy="strict-origin-when-cross-origin"
                             className="w-full h-full border-0"
                           />
+                        </div>
+                        <div className="flex items-center justify-between px-1 text-xs text-slate-500">
+                          <span className="flex items-center gap-1.5">
+                            <Video className="w-3.5 h-3.5 text-brand-600" /> Video materi modul
+                          </span>
+                          <a
+                            href={currentModul.video_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-brand-600 hover:text-brand-700 font-semibold inline-flex items-center gap-1 hover:underline"
+                          >
+                            Buka di tab YouTube eksternal <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
                         </div>
                       </div>
                     )}
@@ -374,6 +435,9 @@ export default function RuangBelajarPage() {
                       isLulusModul={activeStatus?.isLulus || false}
                       materiDibacaPada={currentProgres?.materi_dibaca_pada || null}
                       onLulusSuccess={loadData}
+                      isAllModulLulus={isAllModulLulus}
+                      isFinalModul={isFinalModul}
+                      nextUrutan={nextUrutan}
                     />
                   </div>
                 </>

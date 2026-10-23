@@ -2,9 +2,11 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";
 import { useAuth } from "@/context/AuthContext";
 import { createClient } from "@/lib/supabase/client";
+import ConfirmModal from "@/components/ui/ConfirmModal";
 import {
   BookOpen,
   Plus,
@@ -37,6 +39,7 @@ interface KursusInstrukturItem {
 }
 
 export default function InstrukturKursusPage() {
+  const router = useRouter();
   const { user, role, isLoading } = useAuth();
   const supabase = createClient();
 
@@ -160,17 +163,17 @@ export default function InstrukturKursusPage() {
     }
   };
 
-  const handleAjukan = async (kursusId: string) => {
-    if (!confirm("Ajukan kursus ini untuk ditinjau oleh Admin? Setelah diajukan, kurikulum akan terkunci.")) {
-      return;
-    }
+  const [targetAjukan, setTargetAjukan] = useState<KursusInstrukturItem | null>(null);
 
-    setSubmittingCourseId(kursusId);
+  const handleAjukan = async () => {
+    if (!targetAjukan) return;
+
+    setSubmittingCourseId(targetAjukan.id);
     setActionNotice(null);
 
     try {
       const { data, error } = await supabase.rpc("ajukan_kursus", {
-        p_kursus_id: kursusId,
+        p_kursus_id: targetAjukan.id,
       });
 
       if (error) {
@@ -183,12 +186,13 @@ export default function InstrukturKursusPage() {
           type: "success",
           text: data?.pesan || "Kursus berhasil diajukan untuk ditinjau oleh Admin.",
         });
+        setTargetAjukan(null);
         await loadKursus();
       }
     } catch (err: unknown) {
       setActionNotice({
         type: "error",
-        text: err instanceof Error ? err.message : "Terjadi kesalahan pengajuan.",
+        text: err instanceof Error ? err.message : "Terjadi kesalahan sistem saat mengajukan kursus.",
       });
     } finally {
       setSubmittingCourseId(null);
@@ -295,7 +299,8 @@ export default function InstrukturKursusPage() {
               return (
                 <div
                   key={kursus.id}
-                  className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-5 flex flex-col justify-between"
+                  onClick={() => router.push(`/instruktur/kursus/${kursus.id}`)}
+                  className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-5 flex flex-col justify-between hover:border-brand-400 hover:shadow-md transition duration-200 cursor-pointer group"
                 >
                   <div className="space-y-4">
                     <div className="flex items-center justify-between gap-2">
@@ -305,7 +310,7 @@ export default function InstrukturKursusPage() {
                       {getStatusBadge(kursus.status)}
                     </div>
 
-                    <h3 className="text-xl font-bold text-slate-900 leading-snug">
+                    <h3 className="text-xl font-bold text-slate-900 group-hover:text-brand-600 transition leading-snug">
                       {kursus.judul}
                     </h3>
 
@@ -348,31 +353,36 @@ export default function InstrukturKursusPage() {
 
                   {/* Tombol Aksi */}
                   <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex gap-2">
-                      <Link
-                        href={`/instruktur/kursus/${kursus.id}`}
-                        className="px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
-                      >
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium text-slate-500 group-hover:text-brand-600 transition inline-flex items-center gap-1.5">
+                        <BookOpen className="w-3.5 h-3.5 text-slate-400 group-hover:text-brand-600 transition" />
                         {kursus.status === "draf" ? "Edit Kurikulum" : "Lihat Kurikulum"}
-                      </Link>
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                       <Link
-                        href={`/instruktur/kursus/${kursus.id}/peserta`}
-                        className="px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
+                        href={`/instruktur/kursus/${kursus.id}/peserta?from=kelola`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition"
                       >
                         Peserta & Nilai
                       </Link>
-                    </div>
 
-                    {kursus.status === "draf" && (
-                      <button
-                        onClick={() => handleAjukan(kursus.id)}
-                        disabled={submittingCourseId === kursus.id}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-sm transition disabled:opacity-50"
-                      >
-                        <Send className="w-3.5 h-3.5" />
-                        {submittingCourseId === kursus.id ? "Mengajukan..." : "Ajukan Review"}
-                      </button>
-                    )}
+                      {kursus.status === "draf" && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setTargetAjukan(kursus);
+                          }}
+                          disabled={submittingCourseId === kursus.id}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-sm transition disabled:opacity-50"
+                        >
+                          <Send className="w-3.5 h-3.5" />
+                          {submittingCourseId === kursus.id ? "Mengajukan..." : "Ajukan Review"}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
@@ -539,6 +549,19 @@ export default function InstrukturKursusPage() {
           </div>
         </div>
       )}
+
+      {/* Modal Konfirmasi Pengajuan Kursus */}
+      <ConfirmModal
+        isOpen={targetAjukan !== null}
+        onClose={() => setTargetAjukan(null)}
+        onConfirm={handleAjukan}
+        title="Ajukan Kursus untuk Ditinjau?"
+        message={`Apakah Anda yakin ingin mengajukan kursus "${targetAjukan?.judul}" untuk ditinjau oleh Admin? Setelah diajukan, kurikulum kursus akan terkunci dari pengeditan hingga proses review selesai.`}
+        confirmLabel="Ya, Ajukan Review"
+        cancelLabel="Batal"
+        variant="primary"
+        loading={submittingCourseId !== null}
+      />
     </div>
   );
 }
