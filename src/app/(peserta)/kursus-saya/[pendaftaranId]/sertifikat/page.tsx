@@ -83,12 +83,12 @@ export default function SertifikatPage() {
   }, [user, role, pendaftaranId, supabase]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
+    <div className="min-h-screen flex flex-col bg-slate-50 print:bg-white print:min-h-0 print:block print:p-0 print:m-0">
       <div className="no-print">
         <Navbar />
       </div>
 
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10">
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10 print:p-0 print:m-0 print:max-w-none print:w-full print:block">
         {loading || isLoading ? (
           <div className="py-24 text-center text-slate-400 space-y-3">
             <RefreshCw className="w-8 h-8 animate-spin mx-auto text-brand-600" />
