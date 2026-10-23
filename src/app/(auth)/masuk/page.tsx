@@ -4,15 +4,18 @@ import React, { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { LogIn, AlertCircle, Sparkles, Key, Check } from "lucide-react";
+import { LogIn, AlertCircle, Sparkles, Key, Check, Eye, EyeOff, Info } from "lucide-react";
+import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const kembali = searchParams.get("kembali");
+  const pesanParam = searchParams.get("pesan");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -32,7 +35,7 @@ function LoginForm() {
       if (error) {
         const errLower = error.message.toLowerCase();
         if (errLower.includes("email not confirmed")) {
-          setErrorMsg("Email Anda belum dikonfirmasi. Silakan periksa tautan konfirmasi di inbox atau spam email Anda.");
+          setErrorMsg("Email Anda belum dikonfirmasi. Silakan periksa tautan verifikasi di kotak masuk atau spam email Anda.");
         } else if (errLower.includes("invalid login credentials")) {
           setErrorMsg("Email atau kata sandi tidak cocok. Silakan periksa kembali.");
         } else {
@@ -107,12 +110,37 @@ function LoginForm() {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow-xl shadow-slate-200/50 sm:rounded-2xl sm:px-10 border border-slate-100">
+          {pesanParam === "verifikasi_gagal" && (
+            <div className="mb-5 p-3.5 rounded-xl bg-amber-50 border border-amber-200 flex items-start gap-2.5 text-amber-900 text-sm">
+              <Info className="w-5 h-5 flex-shrink-0 mt-0.5 text-amber-700" />
+              <span>Tautan verifikasi email tidak valid atau telah kedaluwarsa. Silakan periksa kembali tautan terbaru di email Anda.</span>
+            </div>
+          )}
+
           {errorMsg && (
             <div className="mb-5 p-3.5 rounded-xl bg-rose-50 border border-rose-200 flex items-start gap-2.5 text-rose-800 text-sm">
               <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
               <span>{errorMsg}</span>
             </div>
           )}
+
+          {/* Tombol Masuk dengan Google */}
+          <div className="mb-5">
+            <GoogleAuthButton
+              label="Masuk dengan Google"
+              onError={(err) => setErrorMsg(err)}
+            />
+            <div className="relative my-5">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-200" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-3 text-slate-400 font-medium tracking-wider">
+                  atau dengan email
+                </span>
+              </div>
+            </div>
+          </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
@@ -134,21 +162,43 @@ function LoginForm() {
             </div>
 
             <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-slate-700"
-              >
-                Kata Sandi
-              </label>
-              <input
-                id="password"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="mt-1 block w-full px-3.5 py-2.5 rounded-xl border border-slate-300 shadow-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 sm:text-sm"
-              />
+              <div className="flex items-center justify-between">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium text-slate-700"
+                >
+                  Kata Sandi
+                </label>
+                <Link
+                  href="/lupa-password"
+                  className="text-xs font-semibold text-brand-600 hover:text-brand-500 transition"
+                >
+                  Lupa kata sandi?
+                </Link>
+              </div>
+              <div className="relative mt-1">
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="block w-full px-3.5 py-2.5 pr-10 rounded-xl border border-slate-300 shadow-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 sm:text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
+                  aria-label={showPassword ? "Sembunyikan sandi" : "Lihat sandi"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
             </div>
 
             <button

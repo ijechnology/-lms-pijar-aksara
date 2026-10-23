@@ -70,7 +70,10 @@ export async function updateSession(request: NextRequest) {
     (pathname.startsWith("/kursus/") && !pathname.includes("/kursus-saya")) ||
     pathname === "/sitemap.xml" ||
     pathname.startsWith("/_next") ||
-    pathname.startsWith("/api");
+    pathname.startsWith("/api") ||
+    pathname.startsWith("/auth") ||
+    pathname === "/lupa-password" ||
+    pathname === "/atur-ulang-kata-sandi";
 
   if (!isPublicRoute) {
     response.headers.set("X-Robots-Tag", "noindex, nofollow");
@@ -109,8 +112,8 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Pengalihan jika sudah login dan membuka /masuk atau /daftar
-  if (pathname === "/masuk" || pathname === "/daftar") {
+  // Pengalihan jika sudah login dan membuka /masuk, /daftar, atau /lupa-password
+  if (pathname === "/masuk" || pathname === "/daftar" || pathname === "/lupa-password") {
     const url = request.nextUrl.clone();
     if (peran === "admin") {
       url.pathname = "/admin/dashboard";
