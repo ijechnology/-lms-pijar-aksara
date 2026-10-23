@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createMayarInvoice } from "@/lib/mayar";
+import { createMayarInvoice, getMayarInvoiceDetail } from "@/lib/mayar";
 
 export async function POST(request: NextRequest) {
   try {
@@ -74,6 +74,66 @@ export async function POST(request: NextRequest) {
         { error: "Pendaftaran ini telah dibatalkan atau kedaluwarsa. Silakan mendaftar kembali." },
         { status: 400 }
       );
+    }
+
+    // Auto-Verification: Jika pendaftaran sudah punya invoice Mayar, cek langsung ke server Mayar apakah sudah dibayar
+    if (reg.mayar_invoice_id) {
+      try {
+        const verifiedInvoice = await getMayarInvoiceDetail(reg.mayar_invoice_id);
+        const invoiceStatus = (verifiedInvoice.status || "").toUpperCase();
+        const paidStatuses = ["PAID", "SETTLED", "SUCCESS", "CLOSED"];
+
+        if (paidStatuses.includes(invoiceStatus)) {
+          const supabaseAdmin = createAdminClient();
+          await supabaseAdmin
+            .from("pendaftaran")
+            .update({
+              status: "aktif",
+              dibayar_pada: new Date().toISOString(),
+              metode_bayar: "mayar",
+            })
+            .eq("id", reg.id);
+
+          await supabaseAdmin.from("audit_log").insert({
+            pelaku_id: user.id,
+            aksi: "verifikasi_langsung_mayar",
+            nama_tabel: "pendaftaran",
+            id_data: reg.id,
+            data_sesudah: {
+              status: "aktif",
+              invoice_id: reg.mayar_invoice_id,
+              kursus: (reg.kursus as any)?.judul,
+            },
+          });
+
+          return NextResponse.json({
+            success: true,
+            alreadyActive: true,
+            message: "Pembayaran telah terverifikasi lunas! Akses ruang belajar telah dibuka.",
+            redirectUrl: "/kursus-saya",
+          });
+        } else if (verifiedInvoice.paymentUrl || verifiedInvoice.link) {
+          // Jika invoice belum lunas dan masih aktif, gunakan kembali link pembayaran yang ada
+          const paymentLink =
+            verifiedInvoice.paymentUrl ||
+            (typeof verifiedInvoice.link === "string" && verifiedInvoice.link.startsWith("http")
+              ? verifiedInvoice.link
+              : undefined);
+
+          if (paymentLink) {
+            return NextResponse.json({
+              success: true,
+              paymentUrl: paymentLink,
+              invoiceId: reg.mayar_invoice_id,
+              amount: verifiedInvoice.amount || reg.nominal,
+              expiredAt: reg.batas_bayar,
+              isMock: reg.mayar_invoice_id.startsWith("inv_mock_"),
+            });
+          }
+        }
+      } catch (checkErr) {
+        console.warn("[API Mayar Payment] Gagal cek invoice Mayar yang ada:", checkErr);
+      }
     }
 
     // Jika metode pendaftaran adalah transfer_manual, tidak perlu diproses ke gateway Mayar

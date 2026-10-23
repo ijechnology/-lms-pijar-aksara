@@ -192,17 +192,43 @@ export default function KursusSayaPage() {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       if (params.get("pembayaran") === "selesai") {
-        setAlertModal({
-          isOpen: true,
-          title: "Pembayaran Diproses",
-          message:
-            "Terima kasih! Transaksi pembayaran via Mayar berhasil diselesaikan. Status pendaftaran Anda akan otomatis aktif secara instan.",
-          type: "success",
-        });
+        const pendaftaranId = params.get("pendaftaran_id");
+        if (pendaftaranId) {
+          // Panggil endpoint verifikasi agar status pendaftaran langsung diperbarui menjadi aktif
+          fetch("/api/pembayaran/mayar/verifikasi", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ pendaftaran_id: pendaftaranId }),
+          })
+            .then((res) => res.json())
+            .then((resData) => {
+              loadData();
+              setAlertModal({
+                isOpen: true,
+                title: resData.success ? "Pembayaran Terverifikasi!" : "Pembayaran Diproses",
+                message:
+                  resData.message ||
+                  "Terima kasih! Pembayaran via Mayar telah selesai dan status kursus Anda kini telah Aktif.",
+                type: "success",
+              });
+            })
+            .catch(() => {
+              loadData();
+            });
+        } else {
+          setAlertModal({
+            isOpen: true,
+            title: "Pembayaran Diproses",
+            message:
+              "Terima kasih! Transaksi pembayaran via Mayar berhasil diselesaikan. Status pendaftaran Anda akan otomatis aktif secara instan.",
+            type: "success",
+          });
+          loadData();
+        }
         window.history.replaceState({}, "", window.location.pathname);
       }
     }
-  }, []);
+  }, [loadData]);
 
   const [batalModalOpen, setBatalModalOpen] = useState(false);
   const [selectedBatalId, setSelectedBatalId] = useState<string | null>(null);
@@ -327,13 +353,7 @@ export default function KursusSayaPage() {
         throw new Error(data.error || "Gagal memproses pembayaran.");
       }
 
-      if (data.isTransferManual) {
-        setSelectedTransferItem(item);
-      } else if (data.isMock || data.paymentUrl?.includes("mock_invoice=true")) {
-        setSelectedMayarSimulasiItem(item);
-      } else if (data.paymentUrl) {
-        window.location.href = data.paymentUrl;
-      } else if (data.alreadyActive) {
+      if (data.alreadyActive) {
         setAlertModal({
           isOpen: true,
           title: "Pendaftaran Aktif",
@@ -341,6 +361,12 @@ export default function KursusSayaPage() {
           type: "success",
         });
         loadData();
+      } else if (data.isTransferManual) {
+        setSelectedTransferItem(item);
+      } else if (data.isMock || data.paymentUrl?.includes("mock_invoice=true")) {
+        setSelectedMayarSimulasiItem(item);
+      } else if (data.paymentUrl) {
+        window.location.href = data.paymentUrl;
       }
     } catch (err) {
       setAlertModal({

@@ -57,7 +57,11 @@ export async function createMayarInvoice(
     };
   }
 
-  const endpoint = `${MAYAR_BASE_URL}/invoices/create`;
+  const baseUrl =
+    process.env.MAYAR_BASE_URL?.replace(/\/$/, "") || MAYAR_BASE_URL;
+  const apiKey = (process.env.MAYAR_API_KEY || MAYAR_API_KEY).trim();
+
+  const endpoint = `${baseUrl}/invoices/create`;
 
   // Sanitasi nomor ponsel (default fallback valid jika kosong atau terlalu pendek)
   let mobile = (params.customerMobile || "").replace(/[^0-9]/g, "");
@@ -89,7 +93,7 @@ export async function createMayarInvoice(
   const response = await fetch(endpoint, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${MAYAR_API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
       Accept: "application/json",
     },
@@ -125,7 +129,7 @@ export async function createMayarInvoice(
 }
 
 /**
- * Ambil Detail Invoice Mayar untuk Verifikasi Webhook Anti-Spoofing
+ * Ambil Detail Invoice Mayar untuk Verifikasi Webhook Anti-Spoofing & Auto-Verification
  */
 export async function getMayarInvoiceDetail(invoiceId: string): Promise<any> {
   if (!isMayarConfigured() || invoiceId.startsWith("inv_mock_")) {
@@ -136,12 +140,16 @@ export async function getMayarInvoiceDetail(invoiceId: string): Promise<any> {
     };
   }
 
-  const endpoint = `${MAYAR_BASE_URL}/invoices/${invoiceId}`;
+  const baseUrl =
+    process.env.MAYAR_BASE_URL?.replace(/\/$/, "") || MAYAR_BASE_URL;
+  const apiKey = (process.env.MAYAR_API_KEY || MAYAR_API_KEY).trim();
+
+  const endpoint = `${baseUrl}/invoices/${invoiceId}`;
 
   const response = await fetch(endpoint, {
     method: "GET",
     headers: {
-      Authorization: `Bearer ${MAYAR_API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
       Accept: "application/json",
     },
   });
