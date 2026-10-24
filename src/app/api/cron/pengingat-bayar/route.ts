@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { kirimEmailBatasBayar } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
@@ -9,14 +10,46 @@ export const dynamic = "force-dynamic";
  */
 async function prosesPengingatBatasBayar(request: NextRequest) {
   try {
-    // 1. Verifikasi Keamanan Cron Secret (opsional di dev, wajib jika diset di .env)
+    // 1. Verifikasi Keamanan: Token Cron Secret atau Sesi Admin LMS
     const cronSecret = process.env.CRON_SECRET;
     const authHeader = request.headers.get("authorization");
 
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      console.warn("[Cron Pengingat Bayar] Ditolak: Authorization token tidak valid.");
+    let isAuthorized = false;
+    if (cronSecret && authHeader === `Bearer ${cronSecret}`) {
+      isAuthorized = true;
+    } else if (!cronSecret) {
+      // Development mode / fallback
+      isAuthorized = true;
+    }
+
+    if (!isAuthorized) {
+      // Cek apakah dipanggil oleh Admin yang sedang login melalui Dasbor
+      try {
+        const supabaseUser = await createClient();
+        const {
+          data: { user },
+        } = await supabaseUser.auth.getUser();
+
+        if (user) {
+          const { data: profile } = await supabaseUser
+            .from("profiles")
+            .select("role")
+            .eq("id", user.id)
+            .single();
+
+          if (profile?.role === "admin") {
+            isAuthorized = true;
+          }
+        }
+      } catch (authErr) {
+        console.warn("[Cron Pengingat Bayar] Gagal verifikasi sesi admin:", authErr);
+      }
+    }
+
+    if (!isAuthorized) {
+      console.warn("[Cron Pengingat Bayar] Ditolak: Memerlukan Authorization token atau sesi Admin.");
       return NextResponse.json(
-        { error: "Akses ditolak: Token Cron Secret tidak valid." },
+        { error: "Akses ditolak: Memerlukan token Cron Secret atau sesi Admin." },
         { status: 401 }
       );
     }
