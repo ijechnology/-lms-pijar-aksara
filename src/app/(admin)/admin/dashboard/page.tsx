@@ -344,7 +344,7 @@ function AdminDashboardContent() {
       // HITUNG GRAFIK BATANG TINGKAT PENYELESAIAN PER KURSUS
       // -------------------------------------------------------------
       const completionList: PenyelesaianKursusItem[] = [];
-      const kapasitasSemuaKursus: KursusKapasitasItem[] = [];
+      const hampirPenuhKursus: KursusKapasitasItem[] = [];
 
       kursusList.forEach((k: any) => {
         const regsForK = allRegs.filter((r: any) => r.kursus_id === k.id);
@@ -368,8 +368,7 @@ function AdminDashboardContent() {
         }
 
         // -------------------------------------------------------------
-        // HITUNG KAPASITAS SELURUH KURSUS TERBIT (Urutkan Kuota Paling Menipis)
-        // Menghindari ruang kosong ganjil dengan selalu menampilkan kursus terbit teratas
+        // HITUNG TABEL KURSUS HAMPIR PENUH (Sisa Kursi 2 atau Kurang - PRD)
         // -------------------------------------------------------------
         if (k.status === "terbit") {
           const kursiTerpakai = regsForK.filter(
@@ -385,24 +384,26 @@ function AdminDashboardContent() {
           const persenKeterisian =
             k.kuota > 0 ? Math.round((kursiTerpakai / k.kuota) * 100) : 0;
 
-          kapasitasSemuaKursus.push({
-            id: k.id,
-            judul: k.judul,
-            kategori: k.kategori,
-            kuota: k.kuota,
-            kursi_terpakai: kursiTerpakai,
-            sisa_kursi: sisaKursi,
-            persen_keterisian: persenKeterisian,
-          });
+          // Sesuai PRD: Kursus hampir penuh (sisa kursi 2 atau kurang)
+          if (sisaKursi <= 2) {
+            hampirPenuhKursus.push({
+              id: k.id,
+              judul: k.judul,
+              kategori: k.kategori,
+              kuota: k.kuota,
+              kursi_terpakai: kursiTerpakai,
+              sisa_kursi: sisaKursi,
+              persen_keterisian: persenKeterisian,
+            });
+          }
         }
       });
 
       completionList.sort((a, b) => a.persenSelesai - b.persenSelesai);
       setChartPenyelesaianKursus(completionList);
 
-      // Urutkan kursus terbit dari sisa kursi paling sedikit (prioritas penyesuaian kuota)
-      kapasitasSemuaKursus.sort((a, b) => a.sisa_kursi - b.sisa_kursi);
-      setKursusHampirPenuhList(kapasitasSemuaKursus.slice(0, 5));
+      hampirPenuhKursus.sort((a, b) => a.sisa_kursi - b.sisa_kursi);
+      setKursusHampirPenuhList(hampirPenuhKursus);
     } catch (err) {
       console.error("Gagal memuat data dasbor analitik admin:", err);
     } finally {
@@ -750,193 +751,176 @@ function AdminDashboardContent() {
           <GrafikPenyelesaianKursus data={chartPenyelesaianKursus} />
         </div>
 
-        {/* DUA WIDGET ANALITIK DENGAN UX JELAS & TANPA WHITE SPACE KOSONG */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-          {/* WIDGET 1: Modul Paling Menantang (Evaluasi Kurikulum & Soal Kuis) */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+        {/* DUA TABEL ANALITIK SESUAI PRD: MODUL LULUS PERTAMA TERENDAH & KURSUS HAMPIR PENUH */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+          {/* TABEL 1: Modul dengan Tingkat Lulus Percobaan Pertama Terendah */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0">
                   <Lightbulb className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900 text-sm sm:text-base">
-                    Modul Paling Menantang (Tingkat Gagal Tes Awal)
+                  <h3 className="font-bold text-slate-900 text-sm">
+                    Modul Tingkat Lulus Pertama Terendah
                   </h3>
                   <p className="text-[11px] text-slate-500">
-                    Modul di mana banyak peserta gagal di percobaan pertama kuis dan harus mengulang
+                    Masukan untuk instruktur mengevaluasi materi &amp; kuis
                   </p>
                 </div>
               </div>
+              <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 text-[10px] font-bold">
+                {modulLulusPertamaList.length} Modul
+              </span>
             </div>
 
-            {loading ? (
-              <div className="py-10 text-center text-xs text-slate-400">
-                Menganalisis hasil tes kuis pertama...
-              </div>
-            ) : modulLulusPertamaList.length === 0 ? (
-              <div className="py-10 text-center text-xs text-slate-400">
-                Belum ada data pengerjaan kuis pada sistem.
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {modulLulusPertamaList.map((item, idx) => (
-                  <div
-                    key={item.modul_id}
-                    className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/70 hover:bg-slate-50 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                  >
-                    <div className="flex items-start gap-3 min-w-0">
-                      <span className="w-6 h-6 rounded-md bg-amber-100 text-amber-900 font-black text-xs flex items-center justify-center flex-shrink-0 mt-0.5">
-                        #{idx + 1}
-                      </span>
-                      <div className="min-w-0">
-                        <h4 className="font-bold text-slate-900 text-xs sm:text-sm truncate">
-                          Modul {item.modul_urutan}: {item.modul_judul}
-                        </h4>
-                        <p className="text-[11px] text-slate-500 truncate mt-0.5">
-                          {item.kursus_judul} &bull;{" "}
-                          <span className="font-semibold text-brand-600">
-                            Pengampu: {item.instruktur_nama}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    <th className="py-2.5 px-4">Modul &amp; Kursus</th>
+                    <th className="py-2.5 px-3">Instruktur</th>
+                    <th className="py-2.5 px-4 text-right">Lulus Tes Ke-1</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-xs">
+                  {loading ? (
+                    <tr>
+                      <td colSpan={3} className="py-8 text-center text-slate-400">
+                        Memuat data kelulusan modul...
+                      </td>
+                    </tr>
+                  ) : modulLulusPertamaList.length === 0 ? (
+                    <tr>
+                      <td colSpan={3} className="py-8 text-center text-slate-400">
+                        Belum ada data pengerjaan kuis pada sistem.
+                      </td>
+                    </tr>
+                  ) : (
+                    modulLulusPertamaList.map((item, idx) => (
+                      <tr key={item.modul_id} className="hover:bg-slate-50/70 transition">
+                        <td className="py-3 px-4 max-w-[200px]">
+                          <div className="font-semibold text-slate-900 truncate">
+                            <span className="text-slate-400 mr-1.5 font-bold">#{idx + 1}</span>
+                            {item.modul_judul}
+                          </div>
+                          <div className="text-[11px] text-slate-500 truncate mt-0.5">
+                            {item.kursus_judul} (Modul {item.modul_urutan})
+                          </div>
+                        </td>
+                        <td className="py-3 px-3">
+                          <span className="font-medium text-slate-700 block truncate max-w-[130px]">
+                            {item.instruktur_nama || "-"}
                           </span>
-                        </p>
-                        <p className="text-[11px] text-slate-500 mt-1">
-                          Hanya <strong className="text-slate-800">{item.total_lulus_pertama} dari {item.total_percobaan_pertama}</strong> peserta yang lulus langsung tanpa mengulang (Nilai rata-rata: {item.rata_rata_nilai}).
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-1 flex-shrink-0 pl-9 sm:pl-0">
-                      <span
-                        className={`px-2.5 py-1 rounded-full text-xs font-black ${
-                          item.persen_lulus < 50
-                            ? "bg-rose-100 text-rose-700"
-                            : item.persen_lulus < 75
-                            ? "bg-amber-100 text-amber-700"
-                            : "bg-emerald-100 text-emerald-700"
-                        }`}
-                      >
-                        {item.persen_lulus}% Lulus Langsung
-                      </span>
-                      <span className="text-[10px] text-rose-600 font-semibold">
-                        {100 - item.persen_lulus}% Harus Mengulang
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="p-3 bg-amber-50/60 border border-amber-100 rounded-xl text-[11px] text-amber-900 flex items-start gap-2">
-              <HelpCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-              <span>
-                <strong>Tujuan Evaluasi:</strong> Persentase kelulusan langsung yang rendah mengindikasikan materi modul membutuhkan penjelasan tambahan atau pertanyaan kuis perlu disederhanakan oleh instruktur.
-              </span>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <span
+                            className={`inline-block px-2 py-0.5 rounded-md text-[11px] font-black ${
+                              item.persen_lulus < 50
+                                ? "bg-rose-100 text-rose-700"
+                                : item.persen_lulus < 75
+                                ? "bg-amber-100 text-amber-700"
+                                : "bg-emerald-100 text-emerald-700"
+                            }`}
+                          >
+                            {item.persen_lulus}%
+                          </span>
+                          <span className="block text-[10px] text-slate-400 mt-0.5">
+                            {item.total_lulus_pertama}/{item.total_percobaan_pertama} lulus
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
 
-          {/* WIDGET 2: Pantauan Kapasitas Kursi Kursus Terbit (Tanpa White Space Kosong) */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+          {/* TABEL 2: Kursus Hampir Penuh (Sisa Kursi ≤ 2) */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center flex-shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center flex-shrink-0">
                   <AlertTriangle className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900 text-sm sm:text-base">
-                    Pantauan Kapasitas Kursi Kursus
+                  <h3 className="font-bold text-slate-900 text-sm">
+                    Kursus Hampir Penuh (Sisa Kursi &le; 2)
                   </h3>
                   <p className="text-[11px] text-slate-500">
-                    Prioritas kursus terbit dengan sisa kuota paling sedikit untuk penyesuaian kuota (BR-06)
+                    Perlu penyesuaian kuota atau pembukaan kelas baru (BR-06)
                   </p>
                 </div>
               </div>
+              <span className="px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 text-[10px] font-bold">
+                {kursusHampirPenuhList.length} Kursus
+              </span>
             </div>
 
-            {loading ? (
-              <div className="py-10 text-center text-xs text-slate-400">
-                Memeriksa ketersediaan kursi...
-              </div>
-            ) : kursusHampirPenuhList.length === 0 ? (
-              <div className="p-5 rounded-xl border border-slate-200 bg-slate-50 text-center text-xs text-slate-500">
-                Belum ada kursus berstatus terbit saat ini.
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {kursusHampirPenuhList.map((item) => (
-                  <div
-                    key={item.id}
-                    className={`p-3.5 rounded-xl border transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-                      item.sisa_kursi <= 2
-                        ? "border-rose-200 bg-rose-50/30 hover:bg-rose-50/50"
-                        : "border-slate-100 bg-slate-50/60 hover:bg-slate-50"
-                    }`}
-                  >
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold ${
-                            item.sisa_kursi === 0
-                              ? "bg-rose-600 text-white"
-                              : item.sisa_kursi === 1
-                              ? "bg-rose-100 text-rose-800"
-                              : item.sisa_kursi === 2
-                              ? "bg-amber-100 text-amber-800"
-                              : "bg-slate-200 text-slate-700"
-                          }`}
-                        >
-                          {item.sisa_kursi === 0
-                            ? "Penuh (0 Kursi)"
-                            : item.sisa_kursi <= 2
-                            ? `Kritis: Sisa ${item.sisa_kursi} Kursi`
-                            : `Sisa ${item.sisa_kursi} Kursi`}
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-medium">
-                          {item.kategori}
-                        </span>
-                      </div>
-                      <h4 className="font-bold text-slate-900 text-xs sm:text-sm truncate mt-1">
-                        {item.judul}
-                      </h4>
-                      <div className="flex items-center gap-2 mt-1.5 text-[11px] text-slate-500">
-                        <div className="w-24 bg-slate-200 rounded-full h-1.5 overflow-hidden">
-                          <div
-                            className={`h-full rounded-full ${
-                              item.persen_keterisian >= 90
-                                ? "bg-rose-500"
-                                : item.persen_keterisian >= 70
-                                ? "bg-amber-500"
-                                : "bg-brand-500"
-                            }`}
-                            style={{
-                              width: `${Math.min(100, item.persen_keterisian)}%`,
-                            }}
-                          />
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    <th className="py-2.5 px-4">Kursus</th>
+                    <th className="py-2.5 px-3">Sisa Kursi</th>
+                    <th className="py-2.5 px-4 text-right">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-xs">
+                  {loading ? (
+                    <tr>
+                      <td colSpan={3} className="py-8 text-center text-slate-400">
+                        Memeriksa ketersediaan kursi...
+                      </td>
+                    </tr>
+                  ) : kursusHampirPenuhList.length === 0 ? (
+                    <tr>
+                      <td colSpan={3} className="py-8 text-center text-slate-500">
+                        <div className="flex flex-col items-center justify-center gap-1">
+                          <span className="text-emerald-600 font-bold">Semua Kursus Aman</span>
+                          <span className="text-[11px] text-slate-400">Tidak ada kursus terbit dengan sisa kursi &le; 2.</span>
                         </div>
-                        <span className="font-semibold text-slate-700">
-                          {item.kursi_terpakai} / {item.kuota} terpakai ({item.persen_keterisian}%)
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex-shrink-0 self-end sm:self-center">
-                      <Link
-                        href="/admin"
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 hover:border-brand-500 text-slate-700 hover:text-brand-600 font-bold text-xs shadow-xs transition"
-                      >
-                        <SlidersHorizontal className="w-3.5 h-3.5 text-brand-600" />
-                        <span>Ubah Kuota</span>
-                      </Link>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="p-3 bg-slate-50 rounded-xl text-[11px] text-slate-500 flex items-center justify-between">
-              <span>Menampilkan kursus terbit dengan kuota paling menipis.</span>
-              <Link href="/admin" className="font-bold text-brand-600 hover:underline">
-                Kelola Semua Kursus &rarr;
-              </Link>
+                      </td>
+                    </tr>
+                  ) : (
+                    kursusHampirPenuhList.map((item) => (
+                      <tr key={item.id} className="hover:bg-slate-50/70 transition">
+                        <td className="py-3 px-4 max-w-[200px]">
+                          <div className="font-semibold text-slate-900 truncate">
+                            {item.judul}
+                          </div>
+                          <div className="text-[11px] text-slate-500 truncate mt-0.5">
+                            {item.kursi_terpakai} dari {item.kuota} terpakai ({item.persen_keterisian}%)
+                          </div>
+                        </td>
+                        <td className="py-3 px-3">
+                          <span
+                            className={`inline-block px-2 py-0.5 rounded-md text-[11px] font-bold ${
+                              item.sisa_kursi === 0
+                                ? "bg-rose-600 text-white"
+                                : item.sisa_kursi === 1
+                                ? "bg-rose-100 text-rose-800"
+                                : "bg-amber-100 text-amber-800"
+                            }`}
+                          >
+                            {item.sisa_kursi === 0 ? "Penuh (0)" : `Sisa ${item.sisa_kursi} Kursi`}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <Link
+                            href="/admin"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-white border border-slate-200 hover:border-brand-500 text-slate-700 hover:text-brand-600 font-bold text-[11px] shadow-xs transition"
+                          >
+                            <SlidersHorizontal className="w-3 h-3 text-brand-600" />
+                            <span>Ubah</span>
+                          </Link>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
