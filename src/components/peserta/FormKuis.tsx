@@ -171,6 +171,17 @@ export default function FormKuis({
         },
       ]);
 
+      if (data.kursus_selesai) {
+        // Kirim email notifikasi sertifikat resmi terbit
+        fetch("/api/notifikasi/sertifikat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pendaftaran_id: pendaftaranId }),
+        }).catch((certEmailErr) => {
+          console.error("Gagal mengirim email notifikasi sertifikat:", certEmailErr);
+        });
+      }
+
       if (data.lulus && onLulusSuccess) {
         onLulusSuccess();
       }

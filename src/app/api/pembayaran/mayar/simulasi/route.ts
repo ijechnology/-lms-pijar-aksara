@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { kirimEmailPendaftaranAktif } from "@/lib/email";
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,10 +32,10 @@ export async function POST(request: NextRequest) {
 
     const supabaseAdmin = createAdminClient();
 
-    // 2. Ambil data pendaftaran
+    // 2. Ambil data pendaftaran beserta profil peserta
     const { data: reg, error: regErr } = await supabaseAdmin
       .from("pendaftaran")
-      .select("id, peserta_id, status, nominal, kursus (id, judul)")
+      .select("id, peserta_id, status, nominal, kursus (id, judul), peserta:peserta_id (nama_lengkap, email)")
       .eq("id", pendaftaran_id)
       .single();
 
@@ -86,6 +87,25 @@ export async function POST(request: NextRequest) {
         kursus: (reg.kursus as any)?.judul,
       },
     });
+
+    // 5. Kirim Notifikasi Email Pendaftaran Aktif
+    const pesertaData = (reg.peserta as any) || {};
+    const kursusData = (reg.kursus as any) || {};
+    const recipientEmail = pesertaData.email || user.email;
+
+    if (recipientEmail) {
+      console.log("[Simulasi Mayar] Memulai pengiriman email pendaftaran aktif ke:", recipientEmail);
+      await kirimEmailPendaftaranAktif({
+        to: recipientEmail,
+        namaPeserta: pesertaData.nama_lengkap || user.user_metadata?.nama_lengkap || "Peserta LMS",
+        judulKursus: kursusData.judul || "Kursus Pijar Aksara",
+        pendaftaranId: pendaftaran_id,
+        nominal: reg.nominal,
+        metodeBayar: "Simulasi Pembayaran (Sandbox)",
+      }).catch((emailErr) => {
+        console.error("[Simulasi Mayar] Gagal kirim email notifikasi aktif:", emailErr);
+      });
+    }
 
     return NextResponse.json({
       success: true,

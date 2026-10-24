@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getMayarInvoiceDetail } from "@/lib/mayar";
+import { kirimEmailPendaftaranAktif } from "@/lib/email";
 
 /**
  * Health check endpoint untuk verifikasi kesiapan webhook Mayar
@@ -84,7 +85,7 @@ export async function POST(request: NextRequest) {
     if (externalId) {
       const { data: regById } = await supabaseAdmin
         .from("pendaftaran")
-        .select("id, status, kursus_id, peserta_id, mayar_invoice_id, nominal")
+        .select("id, status, kursus_id, peserta_id, mayar_invoice_id, nominal, kursus:kursus_id (judul), peserta:peserta_id (email, nama_lengkap)")
         .eq("id", externalId)
         .maybeSingle();
       reg = regById;
@@ -93,7 +94,7 @@ export async function POST(request: NextRequest) {
     if (!reg && invoiceId) {
       const { data: regByInvoice } = await supabaseAdmin
         .from("pendaftaran")
-        .select("id, status, kursus_id, peserta_id, mayar_invoice_id, nominal")
+        .select("id, status, kursus_id, peserta_id, mayar_invoice_id, nominal, kursus:kursus_id (judul), peserta:peserta_id (email, nama_lengkap)")
         .eq("mayar_invoice_id", invoiceId)
         .maybeSingle();
       reg = regByInvoice;
@@ -182,6 +183,23 @@ export async function POST(request: NextRequest) {
         pendaftaran_id: reg.id,
       },
     });
+
+    // 8. Kirim Notifikasi Email Pendaftaran Aktif
+    const pesertaData = reg.peserta as any;
+    const kursusData = reg.kursus as any;
+    if (pesertaData?.email) {
+      console.log("[Webhook Mayar] Mengirim email pendaftaran aktif ke:", pesertaData.email);
+      await kirimEmailPendaftaranAktif({
+        to: pesertaData.email,
+        namaPeserta: pesertaData.nama_lengkap || "Peserta LMS",
+        judulKursus: kursusData?.judul || "Kursus Pijar Aksara",
+        pendaftaranId: reg.id,
+        nominal: reg.nominal,
+        metodeBayar: "Mayar Payment Gateway",
+      }).catch((emailErr) => {
+        console.error("[Webhook Mayar] Error mengirim email pendaftaran aktif:", emailErr);
+      });
+    }
 
     console.log(
       "[Webhook Mayar] Pembayaran berhasil diverifikasi & akses kursus diaktifkan untuk pendaftaran:",

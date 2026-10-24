@@ -100,9 +100,18 @@ export default function TabPendaftaranBayar() {
 
       if (error) throw error;
 
+      // Panggil endpoint pengiriman email notifikasi pendaftaran aktif
+      fetch("/api/notifikasi/pendaftaran-aktif", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pendaftaran_id: targetKonfirmasi.id }),
+      }).catch((emailErr) => {
+        console.error("Gagal mengirim email konfirmasi pendaftaran aktif:", emailErr);
+      });
+
       setFeedback({
         type: "success",
-        text: `Pendaftaran berhasil dikonfirmasi secara manual! Akses kursus telah dibuka untuk ${targetKonfirmasi.user?.nama_lengkap || "peserta"}.`,
+        text: `Pendaftaran berhasil dikonfirmasi secara manual! Notifikasi email aktivasi telah dikirimkan ke ${targetKonfirmasi.user?.nama_lengkap || "peserta"}.`,
       });
 
       setTargetKonfirmasi(null);

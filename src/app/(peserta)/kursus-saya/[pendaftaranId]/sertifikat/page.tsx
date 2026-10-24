@@ -70,6 +70,15 @@ export default function SertifikatPage() {
           });
         } else {
           setSertifikat(cert);
+
+          // Otomatis kirim email sertifikat di latar belakang saat sertifikat dibuka
+          fetch("/api/notifikasi/sertifikat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ pendaftaran_id: pendaftaranId }),
+          }).catch((err) => {
+            console.error("Gagal mengirim email sertifikat otomatis:", err);
+          });
         }
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : "Terjadi kesalahan.";
