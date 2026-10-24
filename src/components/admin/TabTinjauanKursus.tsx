@@ -19,6 +19,7 @@ import {
   Clock,
   Sparkles,
   ExternalLink,
+  SlidersHorizontal,
 } from "lucide-react";
 
 interface KursusTinjauanItem {
@@ -70,6 +71,16 @@ export default function TabTinjauanKursus() {
   const [rejectReason, setRejectReason] = useState("");
   const [processing, setProcessing] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [successFeedback, setSuccessFeedback] = useState<string | null>(null);
+
+  // Modal Ubah Kuota & Harga (BR-02, BR-06, BR-12)
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editTargetKursus, setEditTargetKursus] = useState<KursusTinjauanItem | null>(null);
+  const [editKuota, setEditKuota] = useState<number>(20);
+  const [editHarga, setEditHarga] = useState<number>(0);
+  const [editKursiTerpakai, setEditKursiTerpakai] = useState<number>(0);
+  const [fetchingKursi, setFetchingKursi] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   // Modal Pratinjau Kurikulum
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
@@ -162,12 +173,13 @@ export default function TabTinjauanKursus() {
     setProcessing(true);
     setActionError(null);
     try {
-      const { error } = await supabase
-        .from("kursus")
-        .update({ status: "ditutup" })
-        .eq("id", closeTargetKursus.id);
+      const { data, error } = await supabase.rpc("ubah_status_kursus_admin", {
+        p_kursus_id: closeTargetKursus.id,
+        p_status_baru: "ditutup",
+      });
 
       if (error) throw error;
+      setSuccessFeedback(`Kursus "${closeTargetKursus.judul}" berhasil ditutup dan tercatat di audit log.`);
       setCloseTargetKursus(null);
       await loadKursus();
     } catch (err) {
@@ -183,16 +195,86 @@ export default function TabTinjauanKursus() {
     setProcessing(true);
     setActionError(null);
     try {
-      const { error } = await supabase
-        .from("kursus")
-        .update({ status: "terbit" })
-        .eq("id", reopenTargetKursus.id);
+      const { data, error } = await supabase.rpc("ubah_status_kursus_admin", {
+        p_kursus_id: reopenTargetKursus.id,
+        p_status_baru: "terbit",
+      });
 
       if (error) throw error;
+      setSuccessFeedback(`Kursus "${reopenTargetKursus.judul}" berhasil dibuka kembali ke publik dan tercatat di audit log.`);
       setReopenTargetKursus(null);
       await loadKursus();
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Gagal membuka kembali kursus.");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  // Buka Modal Ubah Kuota & Harga
+  const handleBukaModalEditKuotaHarga = async (k: KursusTinjauanItem) => {
+    setEditTargetKursus(k);
+    setEditKuota(k.kuota);
+    setEditHarga(k.harga);
+    setEditError(null);
+    setFetchingKursi(true);
+    setEditModalOpen(true);
+
+    try {
+      const { data, error } = await supabase.rpc("hitung_kursi_terpakai", {
+        p_kursus_id: k.id,
+      });
+      if (error) throw error;
+      setEditKursiTerpakai(typeof data === "number" ? data : 0);
+    } catch (err) {
+      console.error("Gagal hitung kursi terpakai:", err);
+      setEditKursiTerpakai(0);
+    } finally {
+      setFetchingKursi(false);
+    }
+  };
+
+  // Simpan Kuota & Harga
+  const handleSimpanKuotaHarga = async () => {
+    if (!editTargetKursus) return;
+
+    if (editKuota < editKursiTerpakai) {
+      setEditError(
+        `Validasi gagal (BR-06): Kuota baru (${editKuota}) tidak boleh lebih kecil dari kursi yang sedang terpakai (${editKursiTerpakai}).`
+      );
+      return;
+    }
+
+    if (editKuota < 1 || editKuota > 100) {
+      setEditError("Kuota peserta harus berada di antara 1 sampai 100 orang (BR-03).");
+      return;
+    }
+
+    if (editHarga !== 0 && (editHarga < 50000 || editHarga > 5000000)) {
+      setEditError("Harga kursus harus Rp0 (gratis) atau antara Rp50.000 sampai Rp5.000.000 (BR-03).");
+      return;
+    }
+
+    setProcessing(true);
+    setEditError(null);
+
+    try {
+      const { data, error } = await supabase.rpc("ubah_kuota_harga_kursus", {
+        p_kursus_id: editTargetKursus.id,
+        p_kuota: editKuota,
+        p_harga: editHarga,
+      });
+
+      if (error) throw error;
+
+      setSuccessFeedback(
+        `Kuota (${editKuota} kursi) dan harga (${editHarga === 0 ? "Gratis" : formatRupiah(editHarga)}) untuk kursus "${editTargetKursus.judul}" berhasil diperbarui dan tercatat di audit log!`
+      );
+      setEditModalOpen(false);
+      setEditTargetKursus(null);
+      await loadKursus();
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : "Gagal memperbarui kuota dan harga kursus.");
     } finally {
       setProcessing(false);
     }
@@ -261,6 +343,22 @@ export default function TabTinjauanKursus() {
 
   return (
     <div className="space-y-6">
+      {/* Notifikasi Sukses */}
+      {successFeedback && (
+        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm flex items-start justify-between gap-3 shadow-xs">
+          <div className="flex items-start gap-2.5">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+            <div className="font-medium">{successFeedback}</div>
+          </div>
+          <button
+            onClick={() => setSuccessFeedback(null)}
+            className="text-emerald-700 hover:text-emerald-900 font-bold text-xs"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Notifikasi Error */}
       {actionError && (
         <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm flex items-start gap-3">
@@ -425,28 +523,50 @@ export default function TabTinjauanKursus() {
                             </>
                           )}
 
-                          {/* Jika Terbit: Tutup */}
+                          {/* Jika Terbit: Tutup & Ubah Kuota/Biaya */}
                           {k.status === "terbit" && (
-                            <button
-                              onClick={() => setCloseTargetKursus(k)}
-                              disabled={processing}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs font-bold transition"
-                              title="Tutup kursus dari pendaftaran publik"
-                            >
-                              <Lock className="w-3.5 h-3.5" /> Tutup
-                            </button>
+                            <>
+                              <button
+                                onClick={() => handleBukaModalEditKuotaHarga(k)}
+                                disabled={processing}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-brand-300 bg-brand-50 text-brand-700 hover:bg-brand-100 text-xs font-bold transition shadow-xs"
+                                title="Ubah Kuota & Biaya Kursus (BR-02, BR-06)"
+                              >
+                                <SlidersHorizontal className="w-3.5 h-3.5" /> Kuota & Biaya
+                              </button>
+
+                              <button
+                                onClick={() => setCloseTargetKursus(k)}
+                                disabled={processing}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs font-bold transition"
+                                title="Tutup kursus dari pendaftaran publik"
+                              >
+                                <Lock className="w-3.5 h-3.5" /> Tutup
+                              </button>
+                            </>
                           )}
 
-                          {/* Jika Ditutup: Buka Kembali */}
+                          {/* Jika Ditutup: Buka Kembali & Ubah Kuota/Biaya */}
                           {k.status === "ditutup" && (
-                            <button
-                              onClick={() => setReopenTargetKursus(k)}
-                              disabled={processing}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-bold transition"
-                              title="Buka kembali pendaftaran kursus"
-                            >
-                              <Sparkles className="w-3.5 h-3.5" /> Buka Kembali
-                            </button>
+                            <>
+                              <button
+                                onClick={() => handleBukaModalEditKuotaHarga(k)}
+                                disabled={processing}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-brand-300 bg-brand-50 text-brand-700 hover:bg-brand-100 text-xs font-bold transition shadow-xs"
+                                title="Ubah Kuota & Biaya Kursus (BR-02, BR-06)"
+                              >
+                                <SlidersHorizontal className="w-3.5 h-3.5" /> Kuota & Biaya
+                              </button>
+
+                              <button
+                                onClick={() => setReopenTargetKursus(k)}
+                                disabled={processing}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-bold transition"
+                                title="Buka kembali pendaftaran kursus"
+                              >
+                                <Sparkles className="w-3.5 h-3.5" /> Buka Kembali
+                              </button>
+                            </>
                           )}
 
                           {/* Detail & Pratinjau Modal */}
@@ -646,6 +766,129 @@ export default function TabTinjauanKursus() {
                 className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 text-xs font-bold transition"
               >
                 Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Ubah Kuota & Harga (BR-02, BR-06, BR-12) */}
+      {editModalOpen && editTargetKursus && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-5 animate-in fade-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-4">
+              <div>
+                <div className="flex items-center gap-2 text-brand-600 text-xs font-bold uppercase tracking-wider">
+                  <SlidersHorizontal className="w-4 h-4" /> Kelola Kapasitas & Biaya
+                </div>
+                <h3 className="text-lg font-extrabold text-slate-900 mt-1">
+                  Ubah Kuota & Harga Kursus
+                </h3>
+                <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">
+                  {editTargetKursus.judul}
+                </p>
+              </div>
+              <button
+                onClick={() => setEditModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Status Kursi Terpakai vs Kuota */}
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+              <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
+                <span>Kursi Terpakai Saat Ini:</span>
+                <span className="px-2.5 py-0.5 rounded-full bg-brand-100 text-brand-800 font-bold">
+                  {fetchingKursi ? "Menghitung..." : `${editKursiTerpakai} Peserta`}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
+                <span>Kuota Saat Ini:</span>
+                <span className="font-bold text-slate-900">{editTargetKursus.kuota} Kursi</span>
+              </div>
+              <p className="text-[11px] text-slate-500 pt-1 border-t border-slate-200/80 leading-relaxed">
+                ℹ️ <strong>Aturan Bisnis (BR-06):</strong> Kuota baru tidak boleh lebih kecil dari kursi yang sedang terpakai ({editKursiTerpakai}). Kursi terpakai mencakup peserta aktif, selesai, dan menunggu bayar aktif.
+              </p>
+            </div>
+
+            {/* Error Message */}
+            {editError && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span>{editError}</span>
+              </div>
+            )}
+
+            {/* Form Fields */}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Kuota Peserta (1 s/d 100 Kursi) <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  min={Math.max(1, editKursiTerpakai)}
+                  max={100}
+                  value={editKuota}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value) || 0;
+                    setEditKuota(val);
+                    if (val < editKursiTerpakai) {
+                      setEditError(`Kuota tidak boleh kurang dari ${editKursiTerpakai} (kursi terpakai).`);
+                    } else {
+                      setEditError(null);
+                    }
+                  }}
+                  className={`w-full px-3.5 py-2.5 rounded-xl border text-sm font-semibold focus:outline-none focus:ring-2 ${
+                    editKuota < editKursiTerpakai
+                      ? "border-rose-400 focus:ring-rose-500 bg-rose-50/30"
+                      : "border-slate-300 focus:ring-brand-500"
+                  }`}
+                />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Batas minimal kuota yang diizinkan untuk kursus ini: <strong>{editKursiTerpakai}</strong>
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Harga Kursus (Rp) <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  max={5000000}
+                  step={10000}
+                  value={editHarga}
+                  onChange={(e) => setEditHarga(parseInt(e.target.value) || 0)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Isi <strong>0</strong> untuk Kursus Gratis, atau antara <strong>Rp50.000 s/d Rp5.000.000</strong> untuk Kursus Berbayar (BR-03).
+                </p>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setEditModalOpen(false)}
+                disabled={processing}
+                className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleSimpanKuotaHarga}
+                disabled={processing || fetchingKursi || editKuota < editKursiTerpakai}
+                className="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white text-xs font-bold transition shadow-xs flex items-center gap-1.5"
+              >
+                {processing ? "Menyimpan..." : "Simpan Perubahan"}
               </button>
             </div>
           </div>
