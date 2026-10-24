@@ -30,16 +30,9 @@ interface Props {
 export default function GrafikPenyelesaianKursus({ data }: Props) {
   const [tampilanLimit, setTampilanLimit] = useState<"5" | "10" | "semua">("5");
 
-  if (!data || data.length === 0) {
-    return (
-      <div className="h-64 flex flex-col items-center justify-center text-slate-400 text-sm">
-        <p>Belum ada data aktivitas belajar kursus untuk dihitung tingkat penyelesaiannya.</p>
-      </div>
-    );
-  }
-
   // Filter jumlah kursus yang ditampilkan agar tidak padat & tetap fokus
   const displayedData = useMemo(() => {
+    if (!data || data.length === 0) return [];
     // Selalu urutkan dari yang terendah ke tertinggi (prioritas evaluasi)
     const sorted = [...data].sort((a, b) => a.persenSelesai - b.persenSelesai);
     if (tampilanLimit === "5") return sorted.slice(0, 5);
@@ -54,6 +47,14 @@ export default function GrafikPenyelesaianKursus({ data }: Props) {
       labelSingkat: d.kursus.length > 24 ? d.kursus.substring(0, 22) + "..." : d.kursus,
     }));
   }, [displayedData]);
+
+  if (!data || data.length === 0) {
+    return (
+      <div className="h-64 flex flex-col items-center justify-center text-slate-400 text-sm">
+        <p>Belum ada data aktivitas belajar kursus untuk dihitung tingkat penyelesaiannya.</p>
+      </div>
+    );
+  }
 
   const getBarColor = (pct: number) => {
     if (pct >= 75) return "#10B981"; // Emerald
