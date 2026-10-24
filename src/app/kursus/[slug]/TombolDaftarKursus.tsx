@@ -129,6 +129,15 @@ export default function TombolDaftarKursus({
 
       setSuccessData(data);
 
+      // Jika pendaftaran langsung aktif (misal kursus gratis), kirim notifikasi email
+      if (data?.status === "aktif" && data?.pendaftaran_id) {
+        fetch("/api/notifikasi/pendaftaran-aktif", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pendaftaran_id: data.pendaftaran_id }),
+        }).catch((nErr) => console.warn("Gagal mengirim email notifikasi pendaftaran aktif:", nErr));
+      }
+
       // Jika metode bayar Mayar, kita buat invoice tagihan
       if (metodeBayar === "mayar" && data?.pendaftaran_id) {
         try {

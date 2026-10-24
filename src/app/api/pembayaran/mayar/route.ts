@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createMayarInvoice, getMayarInvoiceDetail } from "@/lib/mayar";
+import { kirimEmailPendaftaranAktif } from "@/lib/email";
 
 export async function POST(request: NextRequest) {
   try {
@@ -58,6 +59,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const kursus = reg.kursus as any;
+    const profile = reg.profiles as any;
+
     // Jika sudah aktif
     if (reg.status === "aktif" || reg.status === "selesai") {
       return NextResponse.json({
@@ -106,6 +110,21 @@ export async function POST(request: NextRequest) {
             },
           });
 
+          // Kirim Notifikasi Email Pendaftaran Aktif
+          const recipientEmail = profile?.email || user.email;
+          if (recipientEmail) {
+            await kirimEmailPendaftaranAktif({
+              to: recipientEmail,
+              namaPeserta: profile?.nama_lengkap || user.user_metadata?.nama_lengkap || "Peserta LMS",
+              judulKursus: (reg.kursus as any)?.judul || "Kursus Pijar Aksara",
+              pendaftaranId: reg.id,
+              nominal: reg.nominal,
+              metodeBayar: "Mayar Payment Gateway",
+            }).catch((emailErr) => {
+              console.error("[Mayar] Gagal kirim email pendaftaran aktif:", emailErr);
+            });
+          }
+
           return NextResponse.json({
             success: true,
             alreadyActive: true,
@@ -146,8 +165,6 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const kursus = reg.kursus as any;
-    const profile = reg.profiles as any;
     const appUrl =
       process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || "http://localhost:3000";
 
@@ -175,6 +192,21 @@ export async function POST(request: NextRequest) {
         id_data: reg.id,
         data_sesudah: { status: "aktif", kursus: kursus?.judul },
       });
+
+      // Kirim Notifikasi Email Pendaftaran Aktif (Kursus Gratis)
+      const recipientEmail = profile?.email || user.email;
+      if (recipientEmail) {
+        await kirimEmailPendaftaranAktif({
+          to: recipientEmail,
+          namaPeserta: profile?.nama_lengkap || user.user_metadata?.nama_lengkap || "Peserta LMS",
+          judulKursus: kursus?.judul || "Kursus Pijar Aksara",
+          pendaftaranId: reg.id,
+          nominal: 0,
+          metodeBayar: "Kursus Gratis",
+        }).catch((emailErr) => {
+          console.error("[Mayar] Gagal kirim email pendaftaran aktif gratis:", emailErr);
+        });
+      }
 
       return NextResponse.json({
         success: true,
