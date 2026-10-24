@@ -23,7 +23,31 @@ async function prosesPengingatBatasBayar(request: NextRequest) {
     }
 
     if (!isAuthorized) {
-      // Cek apakah dipanggil oleh Admin yang sedang login melalui Dasbor
+      // 1. Cek apakah authHeader adalah Bearer JWT token dari sesi Supabase
+      if (authHeader && authHeader.startsWith("Bearer ")) {
+        const token = authHeader.replace("Bearer ", "").trim();
+        try {
+          const supabaseAdmin = createAdminClient();
+          const { data: { user: tokenUser } } = await supabaseAdmin.auth.getUser(token);
+          if (tokenUser) {
+            const { data: tokenProfile } = await supabaseAdmin
+              .from("profiles")
+              .select("peran")
+              .eq("id", tokenUser.id)
+              .maybeSingle();
+
+            if (tokenProfile?.peran === "admin" || tokenUser.user_metadata?.peran === "admin") {
+              isAuthorized = true;
+            }
+          }
+        } catch (jwtErr) {
+          console.warn("[Cron Pengingat Bayar] Gagal verifikasi JWT token:", jwtErr);
+        }
+      }
+    }
+
+    if (!isAuthorized) {
+      // 2. Cek apakah dipanggil oleh Admin yang sedang login melalui cookie di Dasbor
       try {
         const supabaseUser = await createClient();
         const {
@@ -33,16 +57,16 @@ async function prosesPengingatBatasBayar(request: NextRequest) {
         if (user) {
           const { data: profile } = await supabaseUser
             .from("profiles")
-            .select("role")
+            .select("peran")
             .eq("id", user.id)
-            .single();
+            .maybeSingle();
 
-          if (profile?.role === "admin") {
+          if (profile?.peran === "admin" || user.user_metadata?.peran === "admin") {
             isAuthorized = true;
           }
         }
       } catch (authErr) {
-        console.warn("[Cron Pengingat Bayar] Gagal verifikasi sesi admin:", authErr);
+        console.warn("[Cron Pengingat Bayar] Gagal verifikasi sesi admin cookie:", authErr);
       }
     }
 
