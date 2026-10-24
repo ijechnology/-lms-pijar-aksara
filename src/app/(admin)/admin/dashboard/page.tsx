@@ -20,9 +20,7 @@ import {
   CreditCard,
   Users,
   Award,
-  Calendar,
   AlertTriangle,
-  ArrowRight,
   Clock,
   CheckCircle2,
   SlidersHorizontal,
@@ -62,7 +60,7 @@ function AdminDashboardContent() {
   const { user, role, isLoading } = useAuth();
   const supabase = createClient();
 
-  // Filter Rentang Tanggal: 3 Pilihan Bersih (8 Minggu, Bulan Ini, Custom)
+  // Filter Rentang: 3 Pilihan Bersih (8 Minggu, Bulan Ini, Custom)
   const rentangParam = searchParams.get("rentang") || "8w";
   const dariParam = searchParams.get("dari") || "";
   const sampaiParam = searchParams.get("sampai") || "";
@@ -110,7 +108,7 @@ function AdminDashboardContent() {
 
   const dataLoadedRef = useRef(false);
 
-  // Ubah Rentang Filter (Hanya 3: 8w, bulan-ini, kustom)
+  // Ubah Rentang Filter (8w, bulan-ini, kustom)
   const handleGantiRentang = (val: string) => {
     setRentang(val);
     if (val === "kustom") {
@@ -211,12 +209,10 @@ function AdminDashboardContent() {
         const payDate = r.dibayar_pada ? new Date(r.dibayar_pada) : regDate;
         const nominal = r.nominal ?? r.kursus?.harga ?? 0;
 
-        // Pendaftaran bulan ini
         if (regDate && regDate >= startOfBulanIni && regDate <= endOfBulanIni) {
           regBulanIniCount += 1;
         }
 
-        // Pendapatan bulan ini (pendaftaran aktif dan selesai yang sudah dibayar)
         if (
           (r.status === "aktif" || r.status === "selesai") &&
           payDate &&
@@ -226,7 +222,6 @@ function AdminDashboardContent() {
           revBulanIni += nominal;
         }
 
-        // Peserta aktif
         if (r.status === "aktif") {
           pesertaAktifCount += 1;
         }
@@ -297,7 +292,6 @@ function AdminDashboardContent() {
         const isGratis = nominal === 0;
         const isLunas = r.status === "aktif" || r.status === "selesai";
 
-        // Alokasikan ke bucket mingguan pendaftaran
         if (regDate && regDate >= filterStartDate && regDate <= filterEndDate) {
           for (const b of weeklyBuckets) {
             if (regDate >= b.start && regDate < b.end) {
@@ -312,7 +306,6 @@ function AdminDashboardContent() {
           }
         }
 
-        // Alokasikan ke bucket mingguan pendapatan
         if (
           isLunas &&
           nominal > 0 &&
@@ -348,11 +341,10 @@ function AdminDashboardContent() {
       );
 
       // -------------------------------------------------------------
-      // HITUNG GRAFIK BATANG TINGKAT PENYELESAIAN PER KURSUS:
-      // (selesai dibagi aktif ditambah selesai)
+      // HITUNG GRAFIK BATANG TINGKAT PENYELESAIAN PER KURSUS
       // -------------------------------------------------------------
       const completionList: PenyelesaianKursusItem[] = [];
-      const hampirPenuhTemp: KursusKapasitasItem[] = [];
+      const kapasitasSemuaKursus: KursusKapasitasItem[] = [];
 
       kursusList.forEach((k: any) => {
         const regsForK = allRegs.filter((r: any) => r.kursus_id === k.id);
@@ -376,7 +368,8 @@ function AdminDashboardContent() {
         }
 
         // -------------------------------------------------------------
-        // HITUNG DAFTAR KURSUS HAMPIR PENUH (sisa kursi 2 atau kurang):
+        // HITUNG KAPASITAS SELURUH KURSUS TERBIT (Urutkan Kuota Paling Menipis)
+        // Menghindari ruang kosong ganjil dengan selalu menampilkan kursus terbit teratas
         // -------------------------------------------------------------
         if (k.status === "terbit") {
           const kursiTerpakai = regsForK.filter(
@@ -392,25 +385,24 @@ function AdminDashboardContent() {
           const persenKeterisian =
             k.kuota > 0 ? Math.round((kursiTerpakai / k.kuota) * 100) : 0;
 
-          if (sisaKursi <= 2) {
-            hampirPenuhTemp.push({
-              id: k.id,
-              judul: k.judul,
-              kategori: k.kategori,
-              kuota: k.kuota,
-              kursi_terpakai: kursiTerpakai,
-              sisa_kursi: sisaKursi,
-              persen_keterisian: persenKeterisian,
-            });
-          }
+          kapasitasSemuaKursus.push({
+            id: k.id,
+            judul: k.judul,
+            kategori: k.kategori,
+            kuota: k.kuota,
+            kursi_terpakai: kursiTerpakai,
+            sisa_kursi: sisaKursi,
+            persen_keterisian: persenKeterisian,
+          });
         }
       });
 
       completionList.sort((a, b) => a.persenSelesai - b.persenSelesai);
       setChartPenyelesaianKursus(completionList);
 
-      hampirPenuhTemp.sort((a, b) => a.sisa_kursi - b.sisa_kursi);
-      setKursusHampirPenuhList(hampirPenuhTemp);
+      // Urutkan kursus terbit dari sisa kursi paling sedikit (prioritas penyesuaian kuota)
+      kapasitasSemuaKursus.sort((a, b) => a.sisa_kursi - b.sisa_kursi);
+      setKursusHampirPenuhList(kapasitasSemuaKursus.slice(0, 5));
     } catch (err) {
       console.error("Gagal memuat data dasbor analitik admin:", err);
     } finally {
@@ -431,7 +423,7 @@ function AdminDashboardContent() {
     }
   }, [user?.id, role, isLoading, router, loadDashboardData]);
 
-  // Handler Uji Coba Cron Pengingat 3 Jam (Kirimkan Bearer Session Token agar selalu lolos otorisasi)
+  // Handler Uji Coba Cron (Tombol ringkas di header)
   const handleTriggerCronManual = async () => {
     setCronLoading(true);
     setCronFeedback(null);
@@ -494,7 +486,7 @@ function AdminDashboardContent() {
       <Navbar />
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        {/* HEADER & FILTER RENTANG TANGGAL (Hanya 3 Pilihan Bersih) */}
+        {/* HEADER & KONTROL ATAS: Judul, 3 Filter Bersih, & Tombol Uji Cron Ringkas */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-200 pb-6">
           <div>
             <div className="flex items-center gap-2 text-brand-600 font-bold text-xs uppercase tracking-wider mb-1">
@@ -504,44 +496,58 @@ function AdminDashboardContent() {
               Dasbor LMS Pijar Aksara
             </h1>
             <p className="text-slate-500 text-xs sm:text-sm mt-1">
-              Pantau pendaftaran, pendapatan mingguan, retensi kursus, dan peringatan kapasitas kursi secara akurat.
+              Pantau pendaftaran, pendapatan mingguan, retensi kursus, dan kapasitas kursi secara real-time.
             </p>
           </div>
 
-          {/* FILTER RENTANG: 8 Minggu | Bulan Ini | Custom */}
-          <div className="flex items-center gap-1.5 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-xs self-start lg:self-auto">
+          <div className="flex flex-wrap items-center gap-2.5 self-start lg:self-auto">
+            {/* FILTER RENTANG BERSIH: 8 Minggu | Bulan Ini | Custom */}
+            <div className="flex items-center gap-1.5 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-xs">
+              <button
+                type="button"
+                onClick={() => handleGantiRentang("8w")}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition ${
+                  rentang === "8w" && !isCustomMode
+                    ? "bg-brand-600 text-white shadow-xs"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                8 Minggu
+              </button>
+              <button
+                type="button"
+                onClick={() => handleGantiRentang("bulan-ini")}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition ${
+                  rentang === "bulan-ini" && !isCustomMode
+                    ? "bg-brand-600 text-white shadow-xs"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                Bulan Ini
+              </button>
+              <button
+                type="button"
+                onClick={() => handleGantiRentang("kustom")}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition ${
+                  isCustomMode
+                    ? "bg-brand-600 text-white shadow-xs"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                Custom
+              </button>
+            </div>
+
+            {/* TOMBOL PENGUJIAN CRON RINGKAS (Menggantikan Card Hitam Besar) */}
             <button
               type="button"
-              onClick={() => handleGantiRentang("8w")}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition ${
-                rentang === "8w" && !isCustomMode
-                  ? "bg-brand-600 text-white shadow-xs"
-                  : "text-slate-600 hover:bg-slate-100"
-              }`}
+              onClick={handleTriggerCronManual}
+              disabled={cronLoading}
+              title="Picu uji coba scheduler pengingat batas bayar sisa 3 jam secara manual"
+              className="px-3.5 py-2 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 hover:text-brand-600 font-bold text-xs shadow-xs transition flex items-center gap-1.5 disabled:opacity-50"
             >
-              8 Minggu
-            </button>
-            <button
-              type="button"
-              onClick={() => handleGantiRentang("bulan-ini")}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition ${
-                rentang === "bulan-ini" && !isCustomMode
-                  ? "bg-brand-600 text-white shadow-xs"
-                  : "text-slate-600 hover:bg-slate-100"
-              }`}
-            >
-              Bulan Ini
-            </button>
-            <button
-              type="button"
-              onClick={() => handleGantiRentang("kustom")}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition ${
-                isCustomMode
-                  ? "bg-brand-600 text-white shadow-xs"
-                  : "text-slate-600 hover:bg-slate-100"
-              }`}
-            >
-              Custom
+              <Clock className="w-3.5 h-3.5 text-brand-600" />
+              <span>{cronLoading ? "Mengecek..." : "Uji Cron (3 Jam)"}</span>
             </button>
           </div>
         </div>
@@ -600,7 +606,7 @@ function AdminDashboardContent() {
           </div>
         )}
 
-        {/* 4 KARTU RINGKASAN PERSIS */}
+        {/* 4 KARTU RINGKASAN UTAMA */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {/* 1. Pendaftaran Bulan Ini */}
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-brand-300 transition">
@@ -710,7 +716,7 @@ function AdminDashboardContent() {
           </div>
         </div>
 
-        {/* GRAFIK 3: Tingkat Penyelesaian per Kursus (Lega & Dilengkapi Kontrol Limit) */}
+        {/* GRAFIK 3: Tingkat Penyelesaian per Kursus */}
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
@@ -744,9 +750,9 @@ function AdminDashboardContent() {
           <GrafikPenyelesaianKursus data={chartPenyelesaianKursus} />
         </div>
 
-        {/* DUA WIDGET ANALITIK RAMAH UX (CARD-BASED, SEKALI LIHAT, TANPA SCROLL HORIZONTAL) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* WIDGET 1: Modul Tingkat Lulus Percobaan Pertama Terendah */}
+        {/* DUA WIDGET ANALITIK DENGAN UX JELAS & TANPA WHITE SPACE KOSONG */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+          {/* WIDGET 1: Modul Paling Menantang (Evaluasi Kurikulum & Soal Kuis) */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div className="flex items-center gap-2.5">
@@ -755,10 +761,10 @@ function AdminDashboardContent() {
                 </div>
                 <div>
                   <h3 className="font-bold text-slate-900 text-sm sm:text-base">
-                    Modul Tingkat Lulus Tes Pertama Terendah
+                    Modul Paling Menantang (Tingkat Gagal Tes Awal)
                   </h3>
                   <p className="text-[11px] text-slate-500">
-                    Masukan evaluasi kurikulum untuk instruktur terkait modul yang menantang
+                    Modul di mana banyak peserta gagal di percobaan pertama kuis dan harus mengulang
                   </p>
                 </div>
               </div>
@@ -790,11 +796,11 @@ function AdminDashboardContent() {
                         <p className="text-[11px] text-slate-500 truncate mt-0.5">
                           {item.kursus_judul} &bull;{" "}
                           <span className="font-semibold text-brand-600">
-                            {item.instruktur_nama}
+                            Pengampu: {item.instruktur_nama}
                           </span>
                         </p>
-                        <p className="text-[11px] text-slate-400 mt-1">
-                          {item.total_lulus_pertama} dari {item.total_percobaan_pertama} peserta lulus langsung (Rata-rata: {item.rata_rata_nilai})
+                        <p className="text-[11px] text-slate-500 mt-1">
+                          Hanya <strong className="text-slate-800">{item.total_lulus_pertama} dari {item.total_percobaan_pertama}</strong> peserta yang lulus langsung tanpa mengulang (Nilai rata-rata: {item.rata_rata_nilai}).
                         </p>
                       </div>
                     </div>
@@ -809,10 +815,10 @@ function AdminDashboardContent() {
                             : "bg-emerald-100 text-emerald-700"
                         }`}
                       >
-                        {item.persen_lulus}% Lulus
+                        {item.persen_lulus}% Lulus Langsung
                       </span>
-                      <span className="text-[10px] text-slate-400 font-medium">
-                        Percobaan ke-1
+                      <span className="text-[10px] text-rose-600 font-semibold">
+                        {100 - item.persen_lulus}% Harus Mengulang
                       </span>
                     </div>
                   </div>
@@ -820,15 +826,15 @@ function AdminDashboardContent() {
               </div>
             )}
 
-            <div className="p-3 bg-slate-50 rounded-xl text-[11px] text-slate-500 flex items-center gap-2">
-              <HelpCircle className="w-4 h-4 text-slate-400 flex-shrink-0" />
+            <div className="p-3 bg-amber-50/60 border border-amber-100 rounded-xl text-[11px] text-amber-900 flex items-start gap-2">
+              <HelpCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
               <span>
-                Data ini membantu instruktur menyempurnakan materi atau tingkat kesulitan soal kuis.
+                <strong>Tujuan Evaluasi:</strong> Persentase kelulusan langsung yang rendah mengindikasikan materi modul membutuhkan penjelasan tambahan atau pertanyaan kuis perlu disederhanakan oleh instruktur.
               </span>
             </div>
           </div>
 
-          {/* WIDGET 2: Peringatan Kapasitas Kursus (Sisa Kursi <= 2) */}
+          {/* WIDGET 2: Pantauan Kapasitas Kursi Kursus Terbit (Tanpa White Space Kosong) */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div className="flex items-center gap-2.5">
@@ -837,10 +843,10 @@ function AdminDashboardContent() {
                 </div>
                 <div>
                   <h3 className="font-bold text-slate-900 text-sm sm:text-base">
-                    Kursus Hampir Penuh (Sisa Kursi &le; 2)
+                    Pantauan Kapasitas Kursi Kursus
                   </h3>
                   <p className="text-[11px] text-slate-500">
-                    Peringatan kritis kapasitas kursi kursus terbit untuk penambahan kuota segera
+                    Prioritas kursus terbit dengan sisa kuota paling sedikit untuk penyesuaian kuota (BR-06)
                   </p>
                 </div>
               </div>
@@ -851,25 +857,19 @@ function AdminDashboardContent() {
                 Memeriksa ketersediaan kursi...
               </div>
             ) : kursusHampirPenuhList.length === 0 ? (
-              <div className="p-5 rounded-xl border border-emerald-200 bg-emerald-50/50 flex items-center gap-3.5">
-                <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center flex-shrink-0">
-                  <CheckCircle2 className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-emerald-900 text-xs sm:text-sm">
-                    Kapasitas Kursus Terbit Aman
-                  </h4>
-                  <p className="text-[11px] text-emerald-700 mt-0.5">
-                    Semua kursus terbit saat ini memiliki lebih dari 2 kursi tersedia untuk pendaftar baru.
-                  </p>
-                </div>
+              <div className="p-5 rounded-xl border border-slate-200 bg-slate-50 text-center text-xs text-slate-500">
+                Belum ada kursus berstatus terbit saat ini.
               </div>
             ) : (
               <div className="space-y-3">
                 {kursusHampirPenuhList.map((item) => (
                   <div
                     key={item.id}
-                    className="p-3.5 rounded-xl border border-rose-100 bg-rose-50/20 hover:bg-rose-50/40 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                    className={`p-3.5 rounded-xl border transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                      item.sisa_kursi <= 2
+                        ? "border-rose-200 bg-rose-50/30 hover:bg-rose-50/50"
+                        : "border-slate-100 bg-slate-50/60 hover:bg-slate-50"
+                    }`}
                   >
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
@@ -879,11 +879,15 @@ function AdminDashboardContent() {
                               ? "bg-rose-600 text-white"
                               : item.sisa_kursi === 1
                               ? "bg-rose-100 text-rose-800"
-                              : "bg-amber-100 text-amber-800"
+                              : item.sisa_kursi === 2
+                              ? "bg-amber-100 text-amber-800"
+                              : "bg-slate-200 text-slate-700"
                           }`}
                         >
                           {item.sisa_kursi === 0
                             ? "Penuh (0 Kursi)"
+                            : item.sisa_kursi <= 2
+                            ? `Kritis: Sisa ${item.sisa_kursi} Kursi`
                             : `Sisa ${item.sisa_kursi} Kursi`}
                         </span>
                         <span className="text-[10px] text-slate-400 font-medium">
@@ -896,7 +900,13 @@ function AdminDashboardContent() {
                       <div className="flex items-center gap-2 mt-1.5 text-[11px] text-slate-500">
                         <div className="w-24 bg-slate-200 rounded-full h-1.5 overflow-hidden">
                           <div
-                            className="bg-rose-500 h-full rounded-full"
+                            className={`h-full rounded-full ${
+                              item.persen_keterisian >= 90
+                                ? "bg-rose-500"
+                                : item.persen_keterisian >= 70
+                                ? "bg-amber-500"
+                                : "bg-brand-500"
+                            }`}
                             style={{
                               width: `${Math.min(100, item.persen_keterisian)}%`,
                             }}
@@ -923,37 +933,11 @@ function AdminDashboardContent() {
             )}
 
             <div className="p-3 bg-slate-50 rounded-xl text-[11px] text-slate-500 flex items-center justify-between">
-              <span>Hanya memantau kursus terbit dengan sisa kursi &le; 2.</span>
+              <span>Menampilkan kursus terbit dengan kuota paling menipis.</span>
               <Link href="/admin" className="font-bold text-brand-600 hover:underline">
-                Kelola Kursus &rarr;
+                Kelola Semua Kursus &rarr;
               </Link>
             </div>
-          </div>
-        </div>
-
-        {/* SECTION CRON PENGINGAT 3 JAM */}
-        <div className="bg-gradient-to-r from-slate-900 to-brand-950 p-6 rounded-2xl text-white shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-6 border border-slate-800">
-          <div className="space-y-1 max-w-2xl">
-            <div className="flex items-center gap-2 text-brand-400 font-bold text-xs uppercase tracking-wider">
-              <Clock className="w-4 h-4" /> Penjadwal Terotomatisasi (Scheduler Cron)
-            </div>
-            <h3 className="text-lg font-black tracking-tight text-white">
-              Pengingat Batas Waktu Pembayaran (Tersisa 3 Jam)
-            </h3>
-            <p className="text-xs text-slate-300 leading-relaxed">
-              Sistem secara otomatis mengecek invoice <code className="bg-slate-800 px-1 py-0.5 rounded text-amber-300">menunggu_bayar</code> yang jatuh tempo dalam jendela sisa waktu &le; 3 jam. Email pengingat hanya dikirim satu kali pada fase krusial ini sebelum tagihan kedaluwarsa otomatis.
-            </p>
-          </div>
-          <div className="flex-shrink-0">
-            <button
-              type="button"
-              onClick={handleTriggerCronManual}
-              disabled={cronLoading}
-              className="px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white font-bold text-xs shadow-md transition flex items-center gap-2"
-            >
-              <Sparkles className="w-4 h-4" />
-              <span>{cronLoading ? "Mengecek Tagihan..." : "Tes Cron Pengingat (3 Jam)"}</span>
-            </button>
           </div>
         </div>
       </main>
