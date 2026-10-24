@@ -3,7 +3,6 @@ import { Resend } from "resend";
 
 /**
  * Mendapatkan transporter Gmail SMTP secara dinamis
- * Otomatis membersihkan spasi dari Google App Password (misal 'zfvt qlze uvuc rszn' -> 'zfvtqlzeuvucrszn')
  */
 function getSmtpConfig() {
   const user = (process.env.SMTP_USER || "").trim();
