@@ -79,7 +79,7 @@ export function ModalRekapNilai({
         <div className="p-6 border-b border-slate-100 flex items-start justify-between gap-4 bg-gradient-to-r from-slate-50 to-white">
           <div className="space-y-1">
             <span className="text-[11px] font-bold uppercase tracking-wider text-brand-600 bg-brand-50 px-2.5 py-0.5 rounded-full border border-brand-100">
-              Transkrip Akademik (BR-12)
+              Transkrip Akademik Resmi
             </span>
             <h3 className="text-lg sm:text-xl font-extrabold text-slate-900 leading-snug">
               Rekap Nilai Kuis &amp; Data Peserta
@@ -100,7 +100,7 @@ export function ModalRekapNilai({
 
         {/* Konten Scrollable */}
         <div className="p-6 overflow-y-auto space-y-6 text-sm">
-          {/* Identitas Peserta (BR-12) */}
+          {/* Identitas Peserta */}
           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
             <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
               Identitas Peserta Pemilik Akun
@@ -127,7 +127,7 @@ export function ModalRekapNilai({
               <h4 className="font-bold text-slate-800">
                 Daftar Evaluasi per Modul (Syarat Lulus: {nilaiLulus}/100)
               </h4>
-              <span className="text-slate-500">Maks. 3x Percobaan (BR-10)</span>
+              <span className="text-slate-500">Maksimal 3x Percobaan</span>
             </div>
 
             {sortedModul.length === 0 ? (

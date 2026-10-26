@@ -179,7 +179,7 @@ export default function InstrukturKursusPage() {
       if (error) {
         setActionNotice({
           type: "error",
-          text: error.message || "Pengajuan gagal. Pastikan memenuhi aturan BR-03 (2–10 modul, 3–20 soal per modul).",
+          text: error.message || "Pengajuan gagal. Pastikan memenuhi standar kurikulum (2–10 modul, 3–20 soal per modul).",
         });
       } else {
         setActionNotice({

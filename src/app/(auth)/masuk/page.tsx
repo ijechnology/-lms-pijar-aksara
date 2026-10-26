@@ -4,7 +4,7 @@ import React, { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { LogIn, AlertCircle, Sparkles, Key, Check, Eye, EyeOff, Info } from "lucide-react";
+import { LogIn, AlertCircle, Sparkles, Check, Eye, EyeOff, Info } from "lucide-react";
 import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 
 function LoginForm() {
@@ -77,11 +77,6 @@ function LoginForm() {
     }
   };
 
-  const setTestAccount = (testEmail: string) => {
-    setEmail(testEmail);
-    setPassword("Latihan#2026");
-    setErrorMsg(null);
-  };
 
   return (
     <div className="min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-slate-50">
@@ -215,36 +210,6 @@ function LoginForm() {
               )}
             </button>
           </form>
-
-          {/* Akses Cepat Akun Uji Resmi */}
-          <div className="mt-8 pt-6 border-t border-slate-200">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <Key className="w-3.5 h-3.5 text-accent-600" /> Akun Uji Coba Cepat (Password: Latihan#2026)
-            </p>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={() => setTestAccount("ratna@pijaraksara.test")}
-                className="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-medium text-center transition"
-              >
-                Admin
-              </button>
-              <button
-                type="button"
-                onClick={() => setTestAccount("yudha@pijaraksara.test")}
-                className="px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-medium text-center transition"
-              >
-                Instruktur
-              </button>
-              <button
-                type="button"
-                onClick={() => setTestAccount("nadia.putri@pijaraksara.test")}
-                className="px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-medium text-center transition"
-              >
-                Peserta
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </div>

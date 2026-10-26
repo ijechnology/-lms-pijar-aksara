@@ -6,6 +6,7 @@ import Navbar from "@/components/layout/Navbar";
 import { useAuth } from "@/context/AuthContext";
 import { createClient } from "@/lib/supabase/client";
 import AlertModal from "@/components/ui/AlertModal";
+import Pagination from "@/components/ui/Pagination";
 import {
   User,
   Mail,
@@ -27,6 +28,12 @@ import {
   CreditCard,
   Users,
   LayoutDashboard,
+  Search,
+  Activity,
+  FileCode,
+  Eye,
+  Database,
+  X,
 } from "lucide-react";
 
 interface ModulItem {
@@ -74,6 +81,17 @@ interface KursusEnrollment {
   percobaan_kuis: PercobaanKuisItem[];
 }
 
+interface AdminAuditLogItem {
+  id: string | number;
+  dibuat_pada: string;
+  pelaku_id: string | null;
+  aksi: string;
+  nama_tabel: string;
+  id_data: string | null;
+  data_sebelum: any;
+  data_sesudah: any;
+}
+
 export default function ProfilPesertaPage() {
   const { user, profile, refreshProfile, isLoading: authLoading, role } = useAuth();
   const supabase = createClient();
@@ -84,6 +102,12 @@ export default function ProfilPesertaPage() {
 
   const [enrollments, setEnrollments] = useState<KursusEnrollment[]>([]);
   const [instrukturCourses, setInstrukturCourses] = useState<any[]>([]);
+  const [adminAuditLogs, setAdminAuditLogs] = useState<AdminAuditLogItem[]>([]);
+  const [searchAdminLog, setSearchAdminLog] = useState("");
+  const [selectedAdminLog, setSelectedAdminLog] = useState<AdminAuditLogItem | null>(null);
+  const [adminLogPage, setAdminLogPage] = useState(1);
+  const adminLogsPerPage = 5;
+
   const [loadingData, setLoadingData] = useState(true);
   const [expandedCourse, setExpandedCourse] = useState<Record<string, boolean>>({});
 
@@ -107,11 +131,34 @@ export default function ProfilPesertaPage() {
     }
   }, [profile]);
 
-  // Muat riwayat kursus dan nilai kuis peserta (BR-12) & kursus instruktur
+  // Reset pagination saat pencarian log berubah
+  useEffect(() => {
+    setAdminLogPage(1);
+  }, [searchAdminLog]);
+
+  // Muat riwayat kursus dan nilai kuis peserta & kursus instruktur / log admin
   const loadData = useCallback(async () => {
     if (!user) return;
     if (role === "admin") {
-      setLoadingData(false);
+      setLoadingData(true);
+      try {
+        const { data: logs, error: logErr } = await supabase
+          .from("audit_log")
+          .select(`
+            id, pelaku_id, aksi, nama_tabel, id_data, data_sebelum, data_sesudah, dibuat_pada
+          `)
+          .eq("pelaku_id", user.id)
+          .order("dibuat_pada", { ascending: false })
+          .limit(100);
+
+        if (!logErr && logs) {
+          setAdminAuditLogs(logs);
+        }
+      } catch (err) {
+        console.error("Gagal memuat log audit admin:", err);
+      } finally {
+        setLoadingData(false);
+      }
       return;
     }
     setLoadingData(true);
@@ -253,108 +300,340 @@ export default function ProfilPesertaPage() {
     }));
   };
 
-  // Tampilan Khusus Administrator: Hanya Menampilkan Data Pribadi
+  // Tampilan Khusus Administrator: Layout Kanan-Kiri Seragam Berukuran Sama dengan Pagination
   if (role === "admin") {
+    const filteredAdminLogs = adminAuditLogs.filter((log) => {
+      if (!searchAdminLog) return true;
+      const q = searchAdminLog.toLowerCase();
+      return (
+        log.aksi.toLowerCase().includes(q) ||
+        log.nama_tabel.toLowerCase().includes(q) ||
+        JSON.stringify(log.data_sesudah || {}).toLowerCase().includes(q)
+      );
+    });
+
+    const paginatedAdminLogs = filteredAdminLogs.slice(
+      (adminLogPage - 1) * adminLogsPerPage,
+      adminLogPage * adminLogsPerPage
+    );
+
     return (
       <div className="min-h-screen flex flex-col bg-slate-50">
         <Navbar />
 
-        <main className="flex-1 max-w-xl mx-auto w-full px-4 sm:px-6 py-8 sm:py-12 space-y-6">
+        <main className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-8">
           <div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-              Data Pribadi
+              Profil &amp; Log Aktivitas Administrator
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              Informasi profil dan data pribadi akun administrator Anda.
+              Kelola data identitas akun dan pantau rekam jejak audit aktivitas yang Anda lakukan di sistem.
             </p>
           </div>
 
-          <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/90 shadow-sm space-y-6">
-            <div className="flex items-center gap-4 pb-6 border-b border-slate-100">
-              <div className="w-14 h-14 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 flex items-center justify-center font-black text-xl">
-                {profile?.nama_lengkap
-                  ? profile.nama_lengkap
-                      .split(" ")
-                      .map((n: string) => n[0])
-                      .slice(0, 2)
-                      .join("")
-                      .toUpperCase()
-                  : "AD"}
-              </div>
-              <div className="space-y-1">
-                <h2 className="font-extrabold text-slate-900 text-lg">
-                  {profile?.nama_lengkap || "Administrator"}
-                </h2>
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1 text-xs font-bold text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+            {/* Kolom Kiri: Card Identitas Profil Admin (Ringkas & Proporsional) */}
+            <div className="lg:col-span-1 bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/90 shadow-xs space-y-5">
+              <div className="flex items-center gap-3.5 pb-4 border-b border-slate-100">
+                <div className="w-13 h-13 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 flex items-center justify-center font-black text-xl shadow-xs">
+                  {profile?.nama_lengkap
+                    ? profile.nama_lengkap
+                        .split(" ")
+                        .map((n: string) => n[0])
+                        .slice(0, 2)
+                        .join("")
+                        .toUpperCase()
+                    : "AD"}
+                </div>
+                <div className="space-y-1">
+                  <h2 className="font-extrabold text-slate-900 text-base">
+                    {profile?.nama_lengkap || "Administrator"}
+                  </h2>
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200">
                     <ShieldCheck className="w-3.5 h-3.5" /> Administrator Sistem
-                  </span>
-                  <span className="text-xs text-slate-400">
-                    {user?.email}
                   </span>
                 </div>
               </div>
+
+              {/* Ringkasan Status Administratif */}
+              <div className="grid grid-cols-2 gap-2 p-3 rounded-2xl bg-slate-50 border border-slate-100 text-xs">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Status Akun</span>
+                  <span className="inline-flex items-center gap-1 font-bold text-emerald-700 text-xs mt-0.5">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Aktif
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Hak Akses</span>
+                  <span className="font-bold text-slate-800 text-xs mt-0.5 block truncate">
+                    Penuh (Sistem)
+                  </span>
+                </div>
+              </div>
+
+              <form onSubmit={handleSimpanProfil} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Nama Lengkap
+                  </label>
+                  <input
+                    type="text"
+                    value={namaLengkap}
+                    onChange={(e) => setNamaLengkap(e.target.value)}
+                    required
+                    placeholder="Masukkan nama lengkap Anda"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-hidden transition"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Alamat Email (Akun)
+                  </label>
+                  <input
+                    type="email"
+                    value={user?.email || ""}
+                    disabled
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-100 text-slate-500 text-sm cursor-not-allowed"
+                  />
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Email akun terhubung dengan autentikasi Anda.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Nomor HP / WhatsApp
+                  </label>
+                  <input
+                    type="tel"
+                    value={noHp}
+                    onChange={(e) => setNoHp(e.target.value)}
+                    placeholder="Contoh: 081234567890"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-hidden transition"
+                  />
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={savingProfile}
+                    className="w-full py-2.5 px-4 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-md shadow-brand-500/20 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {savingProfile ? (
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Save className="w-4 h-4" />
+                    )}
+                    <span>{savingProfile ? "Menyimpan Perubahan..." : "Simpan Profil Saya"}</span>
+                  </button>
+                </div>
+              </form>
             </div>
 
-            <form onSubmit={handleSimpanProfil} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Nama Lengkap
-                </label>
-                <input
-                  type="text"
-                  value={namaLengkap}
-                  onChange={(e) => setNamaLengkap(e.target.value)}
-                  required
-                  placeholder="Masukkan nama lengkap Anda"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-hidden transition"
-                />
+            {/* Kolom Kanan: Audit Log Hanya Milik Akun Admin Ini */}
+            <div className="lg:col-span-2 bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/90 shadow-xs space-y-4">
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <Activity className="w-5 h-5 text-brand-600" />
+                      <h2 className="font-extrabold text-slate-900 text-base sm:text-lg">
+                        Log Aktivitas Akun Saya
+                      </h2>
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      Rekam jejak tindakan administratif akun Anda ({user?.email}).
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={loadData}
+                    disabled={loadingData}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition self-start sm:self-auto cursor-pointer"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${loadingData ? "animate-spin" : ""}`} />
+                    <span>Segarkan</span>
+                  </button>
+                </div>
+
+                {/* Search Bar Log */}
+                <div className="relative">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={searchAdminLog}
+                    onChange={(e) => setSearchAdminLog(e.target.value)}
+                    placeholder="Cari aksi (misal: verifikasi, kursus, kuota)..."
+                    className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-brand-500 outline-hidden"
+                  />
+                </div>
+
+                {/* Konten Log */}
+                {loadingData ? (
+                  <div className="py-16 text-center text-slate-400 space-y-3">
+                    <div className="w-8 h-8 border-3 border-brand-200 border-t-brand-600 rounded-full animate-spin mx-auto" />
+                    <p className="text-xs">Memuat rekam jejak aktivitas akun Anda...</p>
+                  </div>
+                ) : filteredAdminLogs.length === 0 ? (
+                  <div className="py-12 text-center text-slate-400 space-y-2">
+                    <Activity className="w-10 h-10 text-slate-300 mx-auto" />
+                    <p className="text-sm font-semibold text-slate-700">Belum Ada Catatan Aktivitas</p>
+                    <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                      {searchAdminLog
+                        ? "Tidak ada aktivitas yang sesuai dengan kata kunci pencarian Anda."
+                        : "Aktivitas administratif yang Anda lakukan akan tercatat otomatis di sini."}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {paginatedAdminLogs.map((log) => {
+                      const formattedDate = new Date(log.dibuat_pada).toLocaleString("id-ID", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      });
+
+                      let actionBadgeColor = "bg-slate-100 text-slate-700 border-slate-200";
+                      let actionLabel = log.aksi;
+                      if (log.aksi.includes("konfirmasi") || log.aksi.includes("bayar")) {
+                        actionBadgeColor = "bg-emerald-50 text-emerald-800 border-emerald-200";
+                        actionLabel = "Konfirmasi Pembayaran";
+                      } else if (log.aksi.includes("setujui")) {
+                        actionBadgeColor = "bg-blue-50 text-blue-800 border-blue-200";
+                        actionLabel = "Setujui Kursus";
+                      } else if (log.aksi.includes("tolak")) {
+                        actionBadgeColor = "bg-rose-50 text-rose-800 border-rose-200";
+                        actionLabel = "Tolak Kursus";
+                      } else if (log.aksi.includes("kuota") || log.aksi.includes("harga")) {
+                        actionBadgeColor = "bg-purple-50 text-purple-800 border-purple-200";
+                        actionLabel = "Ubah Kuota / Biaya";
+                      } else if (log.aksi.includes("batal")) {
+                        actionBadgeColor = "bg-rose-50 text-rose-800 border-rose-200";
+                        actionLabel = "Batalkan Pendaftaran";
+                      }
+
+                      return (
+                        <div
+                          key={log.id}
+                          className="p-3 rounded-2xl border border-slate-200 hover:border-slate-300 bg-white transition space-y-2 shadow-xs"
+                        >
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 text-xs">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${actionBadgeColor}`}
+                              >
+                                {actionLabel}
+                              </span>
+                              <span className="text-[10px] text-slate-500 font-mono bg-slate-100 px-2 py-0.5 rounded-md">
+                                {log.nama_tabel}
+                              </span>
+                            </div>
+                            <span className="text-[11px] text-slate-400 font-medium">{formattedDate}</span>
+                          </div>
+
+                          {log.data_sesudah && typeof log.data_sesudah === "object" && (
+                            <div className="text-xs text-slate-600 bg-slate-50 p-2 rounded-xl border border-slate-100 flex items-center justify-between gap-2">
+                              <p className="line-clamp-1 text-[11px]">
+                                {log.data_sesudah.kursus
+                                  ? `Kursus: ${log.data_sesudah.kursus}`
+                                  : log.data_sesudah.status
+                                  ? `Status diubah ke: ${log.data_sesudah.status}`
+                                  : `Target ID: ${log.id_data || "-"}`}
+                              </p>
+                              <button
+                                onClick={() => setSelectedAdminLog(log)}
+                                className="text-[11px] font-bold text-brand-600 hover:text-brand-700 whitespace-nowrap inline-flex items-center gap-1 cursor-pointer"
+                              >
+                                <Eye className="w-3 h-3" /> Detail
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Alamat Email (Akun)
-                </label>
-                <input
-                  type="email"
-                  value={user?.email || ""}
-                  disabled
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-100 text-slate-500 text-sm cursor-not-allowed"
-                />
-                <p className="text-[11px] text-slate-400 mt-1">
-                  Email akun terhubung dengan login Anda.
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Nomor HP / WhatsApp
-                </label>
-                <input
-                  type="tel"
-                  value={noHp}
-                  onChange={(e) => setNoHp(e.target.value)}
-                  placeholder="Contoh: 081234567890"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-hidden transition"
-                />
-              </div>
-
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  disabled={savingProfile}
-                  className="w-full py-3 px-4 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-md shadow-brand-500/20 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                >
-                  {savingProfile ? (
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Save className="w-4 h-4" />
-                  )}
-                  <span>{savingProfile ? "Menyimpan Perubahan..." : "Simpan Profil Saya"}</span>
-                </button>
-              </div>
-            </form>
+              {/* Pagination Log */}
+              {!loadingData && filteredAdminLogs.length > 0 && (
+                <div className="pt-3 border-t border-slate-100">
+                  <Pagination
+                    currentPage={adminLogPage}
+                    totalItems={filteredAdminLogs.length}
+                    itemsPerPage={adminLogsPerPage}
+                    onPageChange={setAdminLogPage}
+                    className="border-none px-0 py-0 bg-transparent rounded-none"
+                  />
+                </div>
+              )}
+            </div>
           </div>
+
+          {/* Modal Detail JSON Payload */}
+          {selectedAdminLog && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+              <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 border border-slate-100">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2">
+                    <FileCode className="w-5 h-5 text-brand-600" />
+                    <h3 className="text-sm font-bold text-slate-900">
+                      Rincian Log: {selectedAdminLog.aksi}
+                    </h3>
+                  </div>
+                  <button
+                    onClick={() => setSelectedAdminLog(null)}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 transition cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="space-y-3 text-xs max-h-96 overflow-y-auto">
+                  <div className="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                    <div>
+                      <span className="text-slate-400 block text-[11px]">Tabel Target:</span>
+                      <span className="font-bold text-slate-800">{selectedAdminLog.nama_tabel}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[11px]">ID Data:</span>
+                      <span className="font-mono text-slate-800 truncate block">{selectedAdminLog.id_data || "-"}</span>
+                    </div>
+                  </div>
+
+                  {selectedAdminLog.data_sebelum && (
+                    <div>
+                      <span className="text-slate-500 font-bold block mb-1">Data Sebelum:</span>
+                      <pre className="p-3 bg-slate-900 text-slate-200 rounded-xl overflow-x-auto text-[11px] font-mono leading-relaxed">
+                        {JSON.stringify(selectedAdminLog.data_sebelum, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+
+                  {selectedAdminLog.data_sesudah && (
+                    <div>
+                      <span className="text-slate-500 font-bold block mb-1">Data Sesudah:</span>
+                      <pre className="p-3 bg-slate-900 text-emerald-300 rounded-xl overflow-x-auto text-[11px] font-mono leading-relaxed">
+                        {JSON.stringify(selectedAdminLog.data_sesudah, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-2 border-t border-slate-100 flex justify-end">
+                  <button
+                    onClick={() => setSelectedAdminLog(null)}
+                    className="py-2 px-4 rounded-xl bg-slate-800 text-white font-bold text-xs hover:bg-slate-900 transition cursor-pointer"
+                  >
+                    Tutup
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           <AlertModal
             isOpen={alertModal.isOpen}
@@ -382,7 +661,7 @@ export default function ProfilPesertaPage() {
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
             {role === "instruktur"
               ? "Kelola data profil pengajar Anda dan pantau ikhtisar kursus yang Anda ampu."
-              : "Data pribadi Anda (nama, email, nomor HP) dan rekapitulasi nilai kuis kelulusan (BR-12)."}
+              : "Data pribadi Anda (nama, email, nomor HP) dan rekapitulasi nilai kuis kelulusan."}
           </p>
         </div>
 
@@ -562,7 +841,7 @@ export default function ProfilPesertaPage() {
                       {role === "instruktur" ? "Kursus yang Anda Ikuti (Sebagai Peserta)" : "Transkrip Nilai Belajar Peserta"}
                     </h2>
                     <p className="text-xs text-slate-500">
-                      Sesuai BR-12, rekap nilai kuis hanya dapat diakses oleh Anda, instruktur pengampu, dan admin.
+                      Rekap nilai kuis hanya dapat diakses oleh Anda, instruktur pengampu, dan administrator lembaga.
                     </p>
                   </div>
 

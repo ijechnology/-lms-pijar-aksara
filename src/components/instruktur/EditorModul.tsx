@@ -218,7 +218,7 @@ export default function EditorModul({
         <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-center gap-2">
           <Lock className="w-4 h-4 flex-shrink-0 text-amber-600" />
           <span>
-            Kurikulum terkunci (mode hanya-baca) karena kursus tidak sedang berstatus Draf (BR-04).
+            Kurikulum terkunci (mode hanya-baca) karena kursus tidak sedang berstatus Draf.
           </span>
         </div>
       )}

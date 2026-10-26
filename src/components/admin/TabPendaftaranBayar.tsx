@@ -12,9 +12,13 @@ import {
   Search,
   Filter,
   Calendar,
-  Clock,
   User,
   BookOpen,
+  Eye,
+  FileCheck,
+  ExternalLink,
+  X,
+  Clock,
 } from "lucide-react";
 
 interface PendaftaranAdminItem {
@@ -26,6 +30,9 @@ interface PendaftaranAdminItem {
   metode_bayar: string;
   batas_bayar: string | null;
   didaftarkan_pada: string;
+  bukti_bayar_url?: string | null;
+  bukti_bayar_pada?: string | null;
+  catatan_pembayaran?: string | null;
   user: {
     nama_lengkap: string;
     email: string;
@@ -48,6 +55,9 @@ export default function TabPendaftaranBayar() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  // Modal Preview Bukti Pembayaran
+  const [previewBukti, setPreviewBukti] = useState<PendaftaranAdminItem | null>(null);
+
   // Modal Konfirmasi Manual
   const [targetKonfirmasi, setTargetKonfirmasi] = useState<PendaftaranAdminItem | null>(null);
 
@@ -66,6 +76,7 @@ export default function TabPendaftaranBayar() {
         .from("pendaftaran")
         .select(`
           id, peserta_id, kursus_id, status, nominal, metode_bayar, batas_bayar, didaftarkan_pada,
+          bukti_bayar_url, bukti_bayar_pada, catatan_pembayaran,
           user:profiles!pendaftaran_peserta_id_fkey (nama_lengkap, email, no_hp),
           kursus (judul, harga, kuota)
         `)
@@ -350,6 +361,7 @@ export default function TabPendaftaranBayar() {
                   <th className="px-5 py-3.5">Peserta</th>
                   <th className="px-4 py-3.5">Kursus</th>
                   <th className="px-4 py-3.5">Nominal / Metode</th>
+                  <th className="px-4 py-3.5">Bukti Transfer</th>
                   <th className="px-4 py-3.5">Waktu Daftar</th>
                   <th className="px-4 py-3.5">Status</th>
                   <th className="px-5 py-3.5 text-right">Aksi</th>
@@ -378,7 +390,37 @@ export default function TabPendaftaranBayar() {
                       {/* Nominal / Metode */}
                       <td className="px-4 py-4 whitespace-nowrap">
                         <div className="font-bold text-slate-900">{formatRupiah(r.nominal ?? r.kursus?.harga ?? 0)}</div>
-                        <div className="text-[11px] text-slate-500 capitalize">{r.metode_bayar || "Mayar"}</div>
+                        <div className="text-[11px] text-slate-500 capitalize">{r.metode_bayar === "mayar" ? "Mayar Gateway" : (r.metode_bayar || "Manual").replace("_", " ")}</div>
+                      </td>
+
+                      {/* Bukti Transfer */}
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        {r.bukti_bayar_url ? (
+                          <div>
+                            <button
+                              type="button"
+                              onClick={() => setPreviewBukti(r)}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100 text-xs font-bold transition cursor-pointer"
+                            >
+                              <Eye className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>Lihat Bukti</span>
+                            </button>
+                            {r.catatan_pembayaran && (
+                              <div
+                                className="text-[10px] text-slate-500 max-w-[130px] truncate mt-0.5"
+                                title={r.catatan_pembayaran}
+                              >
+                                {r.catatan_pembayaran}
+                              </div>
+                            )}
+                          </div>
+                        ) : r.metode_bayar === "transfer_manual" ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 font-medium">
+                            <Clock className="w-3 h-3" /> Menunggu Bukti
+                          </span>
+                        ) : (
+                          <span className="text-[11px] text-slate-400">-</span>
+                        )}
                       </td>
 
                       {/* Waktu Daftar & Batas Bayar */}
@@ -404,7 +446,7 @@ export default function TabPendaftaranBayar() {
                             <button
                               onClick={() => setTargetKonfirmasi(r)}
                               disabled={processing}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-sm"
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-sm cursor-pointer"
                             >
                               <CheckCircle2 className="w-3.5 h-3.5" /> Konfirmasi Manual
                             </button>
@@ -420,7 +462,7 @@ export default function TabPendaftaranBayar() {
                                 setCancelModalOpen(true);
                               }}
                               disabled={processing}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs font-bold transition"
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs font-bold transition cursor-pointer"
                             >
                               <XCircle className="w-3.5 h-3.5" /> Batalkan
                             </button>
@@ -445,6 +487,108 @@ export default function TabPendaftaranBayar() {
           />
         )}
       </div>
+
+      {/* Modal Lightbox Preview Bukti Transfer */}
+      {previewBukti && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-fade-in"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <div className="flex items-center gap-2">
+                <FileCheck className="w-5 h-5 text-emerald-600" />
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">
+                    Bukti Pembayaran: {previewBukti.user?.nama_lengkap || "Peserta"}
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Kursus: {previewBukti.kursus?.judul} • Nominal: {formatRupiah(previewBukti.nominal)}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setPreviewBukti(null)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 overflow-y-auto">
+              {/* Gambar / Bukti */}
+              {previewBukti.bukti_bayar_url ? (
+                <div className="rounded-2xl border border-slate-200 bg-slate-100 overflow-hidden flex items-center justify-center p-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={previewBukti.bukti_bayar_url}
+                    alt="Bukti Transfer"
+                    className="max-h-96 w-auto object-contain rounded-xl"
+                  />
+                </div>
+              ) : (
+                <div className="p-8 text-center text-slate-400">
+                  <p className="text-sm">Tidak ada berkas bukti yang ditemukan.</p>
+                </div>
+              )}
+
+              {/* Detail Keterangan */}
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Waktu Pengunggahan:</span>
+                  <span className="font-semibold text-slate-800">
+                    {previewBukti.bukti_bayar_pada
+                      ? formatDate(previewBukti.bukti_bayar_pada)
+                      : "Tidak tercatat"}
+                  </span>
+                </div>
+                {previewBukti.catatan_pembayaran && (
+                  <div className="flex justify-between pt-1 border-t border-slate-200">
+                    <span className="text-slate-500">Catatan Pengirim:</span>
+                    <span className="font-bold text-slate-900">{previewBukti.catatan_pembayaran}</span>
+                  </div>
+                )}
+                {previewBukti.bukti_bayar_url && (
+                  <div className="pt-2">
+                    <a
+                      href={previewBukti.bukti_bayar_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-brand-600 hover:text-brand-700 font-bold text-xs"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" /> Buka Berkas Resolusi Penuh
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="px-6 py-3.5 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setPreviewBukti(null)}
+                className="py-2 px-4 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-white transition cursor-pointer"
+              >
+                Tutup
+              </button>
+              {previewBukti.status === "menunggu_bayar" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const target = previewBukti;
+                    setPreviewBukti(null);
+                    setTargetKonfirmasi(target);
+                  }}
+                  className="py-2 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition flex items-center gap-1.5 cursor-pointer"
+                >
+                  <CheckCircle2 className="w-4 h-4" /> Lanjutkan Konfirmasi Pembayaran
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal Konfirmasi Manual (Modern UI) */}
       <ConfirmModal

@@ -157,9 +157,10 @@ export default function TombolDaftarKursus({
         }
       }
 
+      const targetTab = data?.status === "aktif" ? "aktif" : "menunggu_bayar";
       setTimeout(() => {
-        router.push("/kursus-saya");
-      }, 1500);
+        router.push(`/kursus-saya?tab=${targetTab}${data?.pendaftaran_id ? `&pendaftaran_id=${data.pendaftaran_id}` : ""}`);
+      }, 1200);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Terjadi kesalahan saat pendaftaran.";
       setErrorMsg(msg);
@@ -186,7 +187,7 @@ export default function TombolDaftarKursus({
           <span>Akun {role === "admin" ? "Admin" : "Instruktur"}</span>
         </div>
         <p className="text-[11px] text-slate-500 leading-relaxed">
-          Sesuai aturan sistem (BR-05), hanya akun berperan <strong>Peserta</strong> yang dapat mendaftar kursus.
+          Hanya akun dengan peran <strong>Peserta</strong> yang dapat mendaftar kursus.
         </p>
       </div>
     );
@@ -316,10 +317,10 @@ export default function TombolDaftarKursus({
                       />
                       <div>
                         <div className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                          <CreditCard className="w-4 h-4 text-brand-600" /> Mayar Sandbox (Instan QRIS/VA)
+                          <CreditCard className="w-4 h-4 text-brand-600" /> Mayar Payment Gateway (Instan QRIS/VA)
                         </div>
                         <p className="text-xs text-slate-500 mt-0.5">
-                          Pembayaran otomatis terverifikasi via Mayar Sandbox Gateway.
+                          Pembayaran otomatis terverifikasi instan via QRIS, Virtual Account, &amp; E-Wallet.
                         </p>
                       </div>
                     </label>

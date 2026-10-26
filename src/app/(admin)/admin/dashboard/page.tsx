@@ -849,7 +849,7 @@ function AdminDashboardContent() {
                     Kursus Hampir Penuh (Sisa Kursi &le; 2)
                   </h3>
                   <p className="text-[11px] text-slate-500">
-                    Perlu penyesuaian kuota atau pembukaan kelas baru (BR-06)
+                    Perlu penyesuaian kuota atau pembukaan kelas baru
                   </p>
                 </div>
               </div>

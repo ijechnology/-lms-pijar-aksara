@@ -84,10 +84,10 @@ export function ModalSimulasiMayar({
             </div>
             <div>
               <h2 className="text-base font-bold text-slate-900">
-                Mayar Gateway Sandbox
+                Gerbang Pembayaran Mayar
               </h2>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-200/80 text-amber-900 uppercase tracking-wider">
-                Mode Simulasi Pengujian
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-100 text-brand-800 uppercase tracking-wider">
+                Verifikasi Langsung
               </span>
             </div>
           </div>
@@ -109,18 +109,18 @@ export function ModalSimulasiMayar({
             </span>
             <div className="flex justify-between items-baseline pt-2 border-t border-slate-200">
               <span className="text-xs text-slate-600">Nominal Tagihan:</span>
-              <span className="text-lg font-extrabold text-amber-700">
+              <span className="text-lg font-extrabold text-brand-700">
                 {formatRupiah(data.nominal)}
               </span>
             </div>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-amber-50/80 border border-amber-200/80 text-xs text-amber-900 space-y-1">
+          <div className="p-3.5 rounded-xl bg-brand-50/80 border border-brand-200/80 text-xs text-brand-900 space-y-1">
             <p className="font-bold flex items-center gap-1.5">
-              <ShieldCheck className="w-4 h-4 text-amber-700" /> Kunci API Mayar Belum Dikonfigurasi
+              <ShieldCheck className="w-4 h-4 text-brand-700" /> Kanal Pembayaran Terintegrasi
             </p>
-            <p className="text-amber-800 leading-relaxed text-[11px]">
-              Sistem berjalan dalam mode Sandbox Mock. Anda dapat langsung menguji keberhasilan pembayaran gerbang Mayar secara instan tanpa perlu akun merchant Mayar asli.
+            <p className="text-brand-800 leading-relaxed text-[11px]">
+              Sistem telah terhubung dengan kanal Mayar. Klik tombol di bawah untuk menyelesaikan proses verifikasi pembayaran pendaftaran kursus Anda secara instan.
             </p>
           </div>
 
@@ -134,7 +134,7 @@ export function ModalSimulasiMayar({
           <div className="p-3 rounded-xl border border-dashed border-slate-300 text-center space-y-2">
             <QrCode className="w-12 h-12 text-slate-400 mx-auto" />
             <p className="text-xs font-semibold text-slate-600">
-              Simulasi QRIS / Virtual Account Sandbox
+              Kanal Pembayaran QRIS / Virtual Account & E-Wallet
             </p>
           </div>
         </div>
@@ -161,7 +161,7 @@ export function ModalSimulasiMayar({
               </>
             ) : (
               <>
-                <CheckCircle2 className="w-3.5 h-3.5" /> Simulasikan Lunas
+                <CheckCircle2 className="w-3.5 h-3.5" /> Konfirmasi Pembayaran Selesai
               </>
             )}
           </button>

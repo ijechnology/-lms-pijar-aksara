@@ -120,7 +120,7 @@ export default function EditorSoal({
       } else {
         const nextUrutan = soalList.length + 1;
         if (nextUrutan > 20) {
-          setErrorMsg("Maksimal 20 butir soal kuis per modul (BR-03).");
+          setErrorMsg("Maksimal 20 butir soal kuis per modul.");
           setSaving(false);
           return;
         }
@@ -200,7 +200,7 @@ export default function EditorSoal({
             </h3>
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
-            Syarat BR-03: Minimal 3 dan maksimal 20 butir soal per modul.
+            Ketentuan: Minimal 3 dan maksimal 20 butir soal per modul.
           </p>
         </div>
 
@@ -212,7 +212,7 @@ export default function EditorSoal({
                 : "bg-rose-50 text-rose-700 border-rose-200 animate-pulse"
             }`}
           >
-            {soalList.length} / 20 Soal ({countOk ? "Memenuhi BR-03" : "Kurang (< 3)"})
+            {soalList.length} / 20 Soal ({countOk ? "Memenuhi syarat" : "Kurang (< 3)"})
           </span>
 
           {!isLocked && (

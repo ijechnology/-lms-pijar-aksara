@@ -27,7 +27,9 @@ import {
   History,
   FileText,
   User,
+  Upload,
 } from "lucide-react";
+import { ModalUploadBuktiPembayaran } from "@/components/peserta/ModalUploadBuktiPembayaran";
 
 type TabFilter = "aktif" | "menunggu_bayar" | "selesai" | "riwayat" | "semua";
 
@@ -78,6 +80,9 @@ interface PendaftaranItem {
   sertifikat?: { nomor_sertifikat: string } | null;
   progres_modul: ProgresModulItem[];
   percobaan_kuis: PercobaanKuisItem[];
+  bukti_bayar_url?: string | null;
+  bukti_bayar_pada?: string | null;
+  catatan_pembayaran?: string | null;
 }
 
 export default function KursusSayaPage() {
@@ -90,8 +95,11 @@ export default function KursusSayaPage() {
   const [activeTab, setActiveTab] = useState<TabFilter>("aktif");
   const dataLoadedRef = useRef(false);
 
-  // Modal Rekap Nilai Kuis (BR-12)
+  // Modal Rekap Nilai Kuis
   const [selectedRekapItem, setSelectedRekapItem] = useState<PendaftaranItem | null>(null);
+
+  // Modal Unggah Bukti Pembayaran
+  const [selectedUploadBuktiItem, setSelectedUploadBuktiItem] = useState<PendaftaranItem | null>(null);
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -103,6 +111,7 @@ export default function KursusSayaPage() {
         .from("pendaftaran")
         .select(`
           id, kursus_id, status, nominal, metode_bayar, batas_bayar, didaftarkan_pada, alasan_batal,
+          bukti_bayar_url, bukti_bayar_pada, catatan_pembayaran,
           kursus:kursus_id (
             id, judul, slug, kategori, nilai_lulus,
             modul (id, urutan, judul, durasi_menit)
@@ -122,7 +131,7 @@ export default function KursusSayaPage() {
             (p: any) => p.lulus_pada !== null
           ).length;
 
-          // Periksa apakah status menunggu_bayar telah kedaluwarsa secara temporal (BR-07)
+          // Periksa apakah status menunggu_bayar telah kedaluwarsa secara temporal
           let currentStatus = item.status;
           if (
             currentStatus === "menunggu_bayar" &&
@@ -147,6 +156,9 @@ export default function KursusSayaPage() {
             sertifikat: item.sertifikat?.[0] || null,
             progres_modul: item.progres_modul || [],
             percobaan_kuis: item.percobaan_kuis || [],
+            bukti_bayar_url: item.bukti_bayar_url,
+            bukti_bayar_pada: item.bukti_bayar_pada,
+            catatan_pembayaran: item.catatan_pembayaran,
           };
         });
         setPendaftaranList(formatted);
@@ -158,6 +170,17 @@ export default function KursusSayaPage() {
       setLoadingData(false);
     }
   }, [user?.id, supabase]);
+
+  // Baca URL Query Parameter (misal ?tab=menunggu_bayar)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get("tab") as TabFilter | null;
+      if (tabParam && ["aktif", "menunggu_bayar", "selesai", "riwayat", "semua"].includes(tabParam)) {
+        setActiveTab(tabParam);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     loadData();
@@ -649,7 +672,7 @@ export default function KursusSayaPage() {
                           />
                         </div>
 
-                        {/* Tombol Lihat Nilai Kuis (BR-12) */}
+                        {/* Tombol Lihat Nilai Kuis */}
                         <div className="pt-1">
                           <button
                             onClick={() => setSelectedRekapItem(item)}
@@ -664,31 +687,63 @@ export default function KursusSayaPage() {
 
                     {/* FOKUS FINANSIAL: Kondisi Menunggu Bayar (Info Tagihan & Batas Bayar 24 Jam) */}
                     {item.status === "menunggu_bayar" && (
-                      <div className="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200/80 text-xs space-y-2">
-                        <div className="flex justify-between text-slate-700">
-                          <span>Nominal Tagihan:</span>
-                          <span className="font-extrabold text-slate-900">
-                            {formatRupiah(item.nominal)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-slate-600">
-                          <span>Metode Pembayaran:</span>
-                          <span className="capitalize font-semibold">
-                            {item.metode_bayar.replace("_", " ")}
-                          </span>
-                        </div>
-                        {item.batas_bayar && (
-                          <div className="flex justify-between text-amber-900 font-bold pt-1.5 border-t border-amber-200/80">
-                            <span>Batas Bayar 24 Jam:</span>
-                            <span>
-                              {new Date(item.batas_bayar).toLocaleDateString("id-ID", {
-                                day: "numeric",
-                                month: "short",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
+                      <div className="space-y-3">
+                        <div className="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200/80 text-xs space-y-2">
+                          <div className="flex justify-between text-slate-700">
+                            <span>Nominal Tagihan:</span>
+                            <span className="font-extrabold text-slate-900">
+                              {formatRupiah(item.nominal)}
                             </span>
                           </div>
+                          <div className="flex justify-between text-slate-600">
+                            <span>Metode Pembayaran:</span>
+                            <span className="capitalize font-semibold">
+                              {item.metode_bayar === "mayar" ? "Mayar Payment Gateway" : item.metode_bayar.replace("_", " ")}
+                            </span>
+                          </div>
+                          {item.batas_bayar && (
+                            <div className="flex justify-between text-amber-900 font-bold pt-1.5 border-t border-amber-200/80">
+                              <span>Batas Waktu Bayar:</span>
+                              <span>
+                                {new Date(item.batas_bayar).toLocaleDateString("id-ID", {
+                                  day: "numeric",
+                                  month: "short",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Status Unggah Bukti Transfer */}
+                        {item.metode_bayar === "transfer_manual" && (
+                          item.bukti_bayar_url ? (
+                            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs space-y-1">
+                              <div className="flex items-center gap-1.5 font-bold text-emerald-800">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                                <span>Bukti Pembayaran Terunggah</span>
+                              </div>
+                              <p className="text-[11px] text-emerald-700">
+                                Menunggu verifikasi Administrator Lembaga.
+                              </p>
+                              {item.catatan_pembayaran && (
+                                <p className="text-[11px] text-slate-600 bg-white/70 px-2 py-1 rounded-md border border-emerald-100 mt-1">
+                                  Catatan: {item.catatan_pembayaran}
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="p-3 rounded-xl bg-amber-50/90 border border-amber-300 text-xs space-y-1.5">
+                              <div className="flex items-center gap-1.5 font-bold text-amber-900">
+                                <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                                <span>Belum Mengunggah Bukti</span>
+                              </div>
+                              <p className="text-[11px] text-amber-800 leading-relaxed">
+                                Silakan transfer ke rekening resmi lalu unggah struk pembayaran agar pendaftaran Anda dapat diverifikasi oleh admin.
+                              </p>
+                            </div>
+                          )
                         )}
                       </div>
                     )}
@@ -707,8 +762,8 @@ export default function KursusSayaPage() {
                     )}
                   </div>
 
-                  {/* Footer Actions Sesuai Status & PRD */}
-                  <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-2">
+                  {/* Footer Actions Sesuai Status */}
+                  <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-2">
                     {/* Status Aktif: Tombol Lanjutkan Belajar */}
                     {item.status === "aktif" && (
                       <Link
@@ -737,33 +792,48 @@ export default function KursusSayaPage() {
                       </div>
                     )}
 
-                    {/* Status Menunggu Bayar: Tombol Batal & Tombol Bayar */}
+                    {/* Status Menunggu Bayar: Tombol Batal, Petunjuk & Unggah Bukti */}
                     {item.status === "menunggu_bayar" && (
-                      <div className="w-full flex gap-2">
-                        <button
-                          onClick={() => confirmBatalPendaftaran(item.id)}
-                          disabled={cancelingId === item.id}
-                          className="flex-1 py-2 px-3 rounded-xl border border-rose-200 text-xs font-semibold text-rose-700 hover:bg-rose-50 transition cursor-pointer"
-                        >
-                          {cancelingId === item.id ? "Membatalkan..." : "Batalkan"}
-                        </button>
-                        {item.metode_bayar === "transfer_manual" ? (
+                      <div className="w-full flex flex-col gap-2">
+                        <div className="flex gap-2">
                           <button
-                            onClick={() => setSelectedTransferItem(item)}
-                            className="flex-1 text-center py-2 px-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold shadow-sm transition flex items-center justify-center gap-1.5 cursor-pointer"
+                            onClick={() => confirmBatalPendaftaran(item.id)}
+                            disabled={cancelingId === item.id}
+                            className="py-2 px-3 rounded-xl border border-rose-200 text-xs font-semibold text-rose-700 hover:bg-rose-50 transition cursor-pointer"
                           >
-                            <Building2 className="w-3.5 h-3.5" /> Petunjuk Transfer
+                            {cancelingId === item.id ? "..." : "Batalkan"}
                           </button>
-                        ) : (
-                          <button
-                            onClick={() => handleBayar(item)}
-                            disabled={payingId === item.id}
-                            className="flex-1 text-center py-2 px-3 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:bg-slate-300 text-white text-xs font-bold shadow-sm transition flex items-center justify-center gap-1.5 cursor-pointer"
-                          >
-                            <CreditCard className="w-3.5 h-3.5" />
-                            {payingId === item.id ? "Memproses..." : "Bayar via Mayar"}
-                          </button>
-                        )}
+                          {item.metode_bayar === "transfer_manual" ? (
+                            <>
+                              <button
+                                onClick={() => setSelectedTransferItem(item)}
+                                className="flex-1 text-center py-2 px-2.5 rounded-xl border border-slate-200 hover:bg-white text-slate-700 text-xs font-semibold shadow-xs transition flex items-center justify-center gap-1 cursor-pointer"
+                              >
+                                <Building2 className="w-3.5 h-3.5" /> Rekening
+                              </button>
+                              <button
+                                onClick={() => setSelectedUploadBuktiItem(item)}
+                                className={`flex-1 text-center py-2 px-3 rounded-xl text-white text-xs font-bold shadow-sm transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                                  item.bukti_bayar_url
+                                    ? "bg-emerald-600 hover:bg-emerald-700"
+                                    : "bg-brand-600 hover:bg-brand-700 animate-pulse"
+                                }`}
+                              >
+                                <Upload className="w-3.5 h-3.5" />
+                                {item.bukti_bayar_url ? "Perbarui Bukti" : "Unggah Bukti"}
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              onClick={() => handleBayar(item)}
+                              disabled={payingId === item.id}
+                              className="flex-1 text-center py-2 px-3 rounded-xl bg-brand-600 hover:bg-brand-700 disabled:bg-slate-300 text-white text-xs font-bold shadow-sm transition flex items-center justify-center gap-1.5 cursor-pointer"
+                            >
+                              <CreditCard className="w-3.5 h-3.5" />
+                              {payingId === item.id ? "Memproses..." : "Bayar Sekarang (Mayar)"}
+                            </button>
+                          )}
+                        </div>
                       </div>
                     )}
 
@@ -784,7 +854,7 @@ export default function KursusSayaPage() {
         )}
       </main>
 
-      {/* Modal Rekap Nilai Kuis & Data Peserta (BR-12) */}
+      {/* Modal Rekap Nilai Kuis & Data Peserta */}
       {selectedRekapItem && (
         <ModalRekapNilai
           isOpen={!!selectedRekapItem}
@@ -807,7 +877,28 @@ export default function KursusSayaPage() {
         isOpen={!!selectedTransferItem}
         onClose={() => setSelectedTransferItem(null)}
         data={selectedTransferItem}
+        onOpenUpload={() => {
+          if (selectedTransferItem) {
+            setSelectedUploadBuktiItem(selectedTransferItem);
+          }
+        }}
       />
+
+      {/* Modal Unggah Bukti Pembayaran */}
+      {selectedUploadBuktiItem && (
+        <ModalUploadBuktiPembayaran
+          isOpen={!!selectedUploadBuktiItem}
+          onClose={() => setSelectedUploadBuktiItem(null)}
+          pendaftaranId={selectedUploadBuktiItem.id}
+          kursusJudul={selectedUploadBuktiItem.kursus?.judul || "Kursus"}
+          nominal={selectedUploadBuktiItem.nominal}
+          currentBuktiUrl={selectedUploadBuktiItem.bukti_bayar_url}
+          currentCatatan={selectedUploadBuktiItem.catatan_pembayaran}
+          onSuccess={() => {
+            loadData();
+          }}
+        />
+      )}
 
       {/* Modal Simulasi Pembayaran Mayar Sandbox */}
       <ModalSimulasiMayar
@@ -825,7 +916,7 @@ export default function KursusSayaPage() {
         }}
       />
 
-      {/* Modal Konfirmasi Pembatalan Pendaftaran (BR-07) */}
+      {/* Modal Konfirmasi Pembatalan Pendaftaran */}
       <ConfirmModal
         isOpen={batalModalOpen}
         onClose={() => {

@@ -193,7 +193,7 @@ export default function DetailKurikulumInstrukturPage() {
     if (!kursus || isLocked) return;
 
     if (!isCurriculumValid) {
-      let pesan = "Kurikulum belum memenuhi syarat BR-03:\n";
+      let pesan = "Kurikulum belum memenuhi standar kelayakan:\n";
       if (!isModulCountValid) {
         pesan += `- Jumlah modul harus 2 s/d 10 (saat ini: ${totalModul} modul)\n`;
       }
@@ -442,7 +442,7 @@ export default function DetailKurikulumInstrukturPage() {
           <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
             <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-brand-600" />
-              Kesiapan Standar Kurikulum Kursus (BR-03)
+              Kesiapan Standar Kurikulum Kursus
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
               <div className="flex items-center gap-2">
@@ -644,7 +644,7 @@ export default function DetailKurikulumInstrukturPage() {
                   {activeTab === "soal" && (
                     <div className="space-y-4">
                       <p className="text-xs text-slate-500">
-                        Kunci jawaban tersimpan terisolasi di sisi server (INV-05) dan tidak akan
+                        Kunci jawaban tersimpan aman terisolasi di sisi server dan tidak akan
                         pernah dibocorkan ke peserta.
                       </p>
                       <EditorSoal

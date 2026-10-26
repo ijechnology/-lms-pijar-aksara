@@ -312,7 +312,7 @@ export default function RuangBelajarPage() {
                     Modul {currentUrutan} Masih Terkunci
                   </h3>
                   <p className="text-sm text-slate-600 max-w-md mx-auto leading-relaxed">
-                    Sesuai aturan kurikulum bertingkat (BR-08), Anda harus menyelesaikan dan lulus kuis pada modul sebelumnya terlebih dahulu sebelum dapat membuka materi ini.
+                    Sesuai aturan kurikulum bertingkat, Anda harus menyelesaikan dan lulus kuis pada modul sebelumnya terlebih dahulu sebelum dapat membuka materi ini.
                   </p>
                   <Link
                     href={`/kursus-saya/${pendaftaranId}/modul/${currentUrutan - 1}`}

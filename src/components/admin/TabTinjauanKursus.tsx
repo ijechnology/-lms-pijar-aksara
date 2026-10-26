@@ -142,7 +142,7 @@ export default function TabTinjauanKursus() {
   const handleTolakKursus = async () => {
     if (!rejectTargetKursus) return;
     if (rejectReason.trim().length < 10) {
-      setActionError("Alasan penolakan wajib diisi minimal 10 karakter (BR-04).");
+      setActionError("Alasan penolakan wajib diisi minimal 10 karakter.");
       return;
     }
 
@@ -240,18 +240,18 @@ export default function TabTinjauanKursus() {
 
     if (editKuota < editKursiTerpakai) {
       setEditError(
-        `Validasi gagal (BR-06): Kuota baru (${editKuota}) tidak boleh lebih kecil dari kursi yang sedang terpakai (${editKursiTerpakai}).`
+        `Validasi gagal: Kuota baru (${editKuota}) tidak boleh lebih kecil dari kursi yang sedang terpakai (${editKursiTerpakai}).`
       );
       return;
     }
 
     if (editKuota < 1 || editKuota > 100) {
-      setEditError("Kuota peserta harus berada di antara 1 sampai 100 orang (BR-03).");
+      setEditError("Kuota peserta harus berada di antara 1 sampai 100 orang.");
       return;
     }
 
     if (editHarga !== 0 && (editHarga < 50000 || editHarga > 5000000)) {
-      setEditError("Harga kursus harus Rp0 (gratis) atau antara Rp50.000 sampai Rp5.000.000 (BR-03).");
+      setEditError("Harga kursus harus Rp0 (gratis) atau antara Rp50.000 sampai Rp5.000.000.");
       return;
     }
 
@@ -530,7 +530,7 @@ export default function TabTinjauanKursus() {
                                 onClick={() => handleBukaModalEditKuotaHarga(k)}
                                 disabled={processing}
                                 className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-brand-300 bg-brand-50 text-brand-700 hover:bg-brand-100 text-xs font-bold transition shadow-xs"
-                                title="Ubah Kuota & Biaya Kursus (BR-02, BR-06)"
+                                title="Ubah Kuota & Biaya Kursus"
                               >
                                 <SlidersHorizontal className="w-3.5 h-3.5" /> Kuota & Biaya
                               </button>
@@ -553,7 +553,7 @@ export default function TabTinjauanKursus() {
                                 onClick={() => handleBukaModalEditKuotaHarga(k)}
                                 disabled={processing}
                                 className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-brand-300 bg-brand-50 text-brand-700 hover:bg-brand-100 text-xs font-bold transition shadow-xs"
-                                title="Ubah Kuota & Biaya Kursus (BR-02, BR-06)"
+                                title="Ubah Kuota & Biaya Kursus"
                               >
                                 <SlidersHorizontal className="w-3.5 h-3.5" /> Kuota & Biaya
                               </button>
@@ -635,7 +635,7 @@ export default function TabTinjauanKursus() {
                 className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500"
               />
               <div className="flex justify-between items-center text-xs text-slate-500">
-                <span>Minimal 10 karakter sesuai aturan BR-04</span>
+                <span>Minimal 10 karakter penjelasan objektif</span>
                 <span
                   className={
                     rejectReason.trim().length >= 10 ? "text-emerald-600 font-bold" : "text-rose-600 font-bold"
@@ -810,7 +810,7 @@ export default function TabTinjauanKursus() {
                 <span className="font-bold text-slate-900">{editTargetKursus.kuota} Kursi</span>
               </div>
               <p className="text-[11px] text-slate-500 pt-1 border-t border-slate-200/80 leading-relaxed">
-                ℹ️ <strong>Aturan Bisnis (BR-06):</strong> Kuota baru tidak boleh lebih kecil dari kursi yang sedang terpakai ({editKursiTerpakai}). Kursi terpakai mencakup peserta aktif, selesai, dan menunggu bayar aktif.
+                ℹ️ <strong>Ketentuan Kapasitas:</strong> Kuota baru tidak boleh lebih kecil dari kursi yang sedang terpakai ({editKursiTerpakai}). Kursi terpakai mencakup peserta aktif, selesai, dan menunggu bayar aktif.
               </p>
             </div>
 
@@ -867,7 +867,7 @@ export default function TabTinjauanKursus() {
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500"
                 />
                 <p className="text-[11px] text-slate-400 mt-1">
-                  Isi <strong>0</strong> untuk Kursus Gratis, atau antara <strong>Rp50.000 s/d Rp5.000.000</strong> untuk Kursus Berbayar (BR-03).
+                  Isi <strong>0</strong> untuk Kursus Gratis, atau antara <strong>Rp50.000 s/d Rp5.000.000</strong> untuk Kursus Berbayar.
                 </p>
               </div>
             </div>

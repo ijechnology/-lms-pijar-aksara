@@ -133,11 +133,24 @@ export async function POST(request: NextRequest) {
           });
         } else if (verifiedInvoice.paymentUrl || verifiedInvoice.link) {
           // Jika invoice belum lunas dan masih aktif, gunakan kembali link pembayaran yang ada
-          const paymentLink =
+          let paymentLink =
             verifiedInvoice.paymentUrl ||
             (typeof verifiedInvoice.link === "string" && verifiedInvoice.link.startsWith("http")
               ? verifiedInvoice.link
               : undefined);
+
+          const payId = verifiedInvoice.paymentLinkId || verifiedInvoice.id || reg.mayar_invoice_id;
+          if (paymentLink && payId) {
+            try {
+              const urlObj = new URL(paymentLink);
+              if (urlObj.pathname.includes("/invoices/")) {
+                urlObj.pathname = `/select-channel/${payId}`;
+                paymentLink = urlObj.toString();
+              }
+            } catch {
+              paymentLink = paymentLink.replace(/\/invoices\/[^\/?#]+/, `/select-channel/${payId}`);
+            }
+          }
 
           if (paymentLink) {
             return NextResponse.json({

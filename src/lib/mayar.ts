@@ -112,12 +112,26 @@ export async function createMayarInvoice(
   const data = resJson.data || resJson;
 
   // Mayar V2 mengembalikan URL pembayaran di paymentUrl atau link
-  const paymentLink =
+  let paymentLink =
     data.paymentUrl ||
     data.payment_url ||
     (typeof data.link === "string" && data.link.startsWith("http") ? data.link : undefined) ||
     data.url ||
     "";
+
+  // Arahkan langsung ke halaman pemilihan channel (select-channel) tanpa perantara invoice landing page
+  const paymentId = data.paymentLinkId || data.id || data.invoice_id;
+  if (paymentLink && paymentId) {
+    try {
+      const urlObj = new URL(paymentLink);
+      if (urlObj.pathname.includes("/invoices/")) {
+        urlObj.pathname = `/select-channel/${paymentId}`;
+        paymentLink = urlObj.toString();
+      }
+    } catch {
+      paymentLink = paymentLink.replace(/\/invoices\/[^\/?#]+/, `/select-channel/${paymentId}`);
+    }
+  }
 
   return {
     id: data.id || data.invoice_id || data.paymentLinkId,

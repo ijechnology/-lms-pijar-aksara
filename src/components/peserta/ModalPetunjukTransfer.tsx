@@ -26,12 +26,14 @@ interface ModalPetunjukTransferProps {
   isOpen: boolean;
   onClose: () => void;
   data: TransferRegistrationData | null;
+  onOpenUpload?: () => void;
 }
 
 export function ModalPetunjukTransfer({
   isOpen,
   onClose,
   data,
+  onOpenUpload,
 }: ModalPetunjukTransferProps) {
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
@@ -234,22 +236,12 @@ export function ModalPetunjukTransfer({
               </div>
             )}
 
-            <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200/80 text-emerald-900 text-xs flex items-start gap-2">
+            <div className="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200/80 text-emerald-900 text-xs flex items-start gap-2.5">
               <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="font-bold">Alur Verifikasi Pembayaran (BR-07):</p>
+                <p className="font-bold">Alur Verifikasi Pembayaran:</p>
                 <p className="mt-0.5 text-emerald-800 leading-relaxed">
-                  Setelah Anda melakukan transfer, Administrator Lembaga Pijar Aksara akan memverifikasi pembayaran Anda di <strong>Panel Admin &gt; Tab Pendaftaran &amp; Pembayaran</strong>. Setelah diverifikasi, modul kursus akan otomatis terbuka.
-                </p>
-              </div>
-            </div>
-
-            <div className="p-3 rounded-xl bg-blue-50/80 border border-blue-200/80 text-blue-900 text-xs flex items-start gap-2">
-              <HelpCircle className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="font-bold">Pengujian Lokal (Capstone):</p>
-                <p className="mt-0.5 text-blue-800 leading-relaxed">
-                  Untuk memverifikasi pendaftaran ini langsung, Anda dapat masuk ke akun Admin (<code>admin@pijaraksara.test</code>) lalu buka <strong>Panel Admin &gt; Pendaftaran &amp; Pembayaran</strong> dan klik <strong>Konfirmasi Bayar</strong>.
+                  Setelah Anda melakukan transfer, silakan unggah foto/berkas struk bukti pembayaran pada tab <strong>Menunggu Pembayaran</strong>. Tim Administrator Lembaga Pijar Aksara akan memverifikasi bukti tersebut dan modul belajar akan otomatis terbuka seketika.
                 </p>
               </div>
             </div>
@@ -257,13 +249,27 @@ export function ModalPetunjukTransfer({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3.5 border-t border-slate-100 bg-slate-50 flex items-center justify-end">
+        <div className="px-6 py-3.5 border-t border-slate-100 bg-slate-50 flex items-center justify-between gap-3">
+          {onOpenUpload ? (
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onOpenUpload();
+              }}
+              className="py-2 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition flex items-center gap-1.5 cursor-pointer"
+            >
+              Sudah Transfer? Unggah Bukti
+            </button>
+          ) : (
+            <div />
+          )}
           <button
             type="button"
             onClick={onClose}
-            className="py-2 px-5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-sm transition"
+            className="py-2 px-5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs shadow-sm transition cursor-pointer"
           >
-            Mengerti &amp; Tutup
+            Tutup
           </button>
         </div>
       </div>
