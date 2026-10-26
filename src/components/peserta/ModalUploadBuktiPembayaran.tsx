@@ -1,16 +1,26 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
-  X,
-  Upload,
   FileCheck,
-  AlertCircle,
-  Loader2,
   Image as ImageIcon,
-  CheckCircle2,
-  ExternalLink,
+  Loader2,
+  Upload,
 } from "lucide-react";
+import { toast } from "sonner";
+
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 
 interface ModalUploadBuktiPembayaranProps {
@@ -38,11 +48,20 @@ export function ModalUploadBuktiPembayaran({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(currentBuktiUrl || null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(
+    currentBuktiUrl || null
+  );
   const [catatan, setCatatan] = useState<string>(currentCatatan || "");
   const [uploading, setUploading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl?.startsWith("blob:")) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
 
   if (!isOpen) return null;
 
@@ -62,13 +81,21 @@ export function ModalUploadBuktiPembayaran({
     // Batasi ukuran maks 5 MB
     if (file.size > 5 * 1024 * 1024) {
       setErrorMsg("Ukuran berkas maksimal 5 MB.");
+      e.target.value = "";
       return;
     }
 
     // Validasi tipe berkas
-    const validTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg", "application/pdf"];
+    const validTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/jpg",
+      "application/pdf",
+    ];
     if (!validTypes.includes(file.type)) {
       setErrorMsg("Format berkas harus berupa JPG, PNG, WEBP, atau PDF.");
+      e.target.value = "";
       return;
     }
 
@@ -91,7 +118,6 @@ export function ModalUploadBuktiPembayaran({
 
     setUploading(true);
     setErrorMsg(null);
-    setSuccessMsg(null);
 
     try {
       let finalBuktiUrl = currentBuktiUrl || "";
@@ -122,11 +148,14 @@ export function ModalUploadBuktiPembayaran({
       }
 
       // Simpan URL bukti bayar ke database via RPC (aman & terisolasi)
-      const { error: rpcError } = await supabase.rpc("unggah_bukti_pembayaran", {
-        p_pendaftaran_id: pendaftaranId,
-        p_bukti_bayar_url: finalBuktiUrl,
-        p_catatan: catatan.trim() || null,
-      });
+      const { error: rpcError } = await supabase.rpc(
+        "unggah_bukti_pembayaran",
+        {
+          p_pendaftaran_id: pendaftaranId,
+          p_bukti_bayar_url: finalBuktiUrl,
+          p_catatan: catatan.trim() || null,
+        }
+      );
 
       if (rpcError) {
         // Fallback ke update langsung jika RPC belum tersedia
@@ -140,86 +169,93 @@ export function ModalUploadBuktiPembayaran({
           .eq("id", pendaftaranId);
 
         if (updateError) {
-          throw new Error(`Gagal menyimpan data pembayaran: ${updateError.message || rpcError.message}`);
+          throw new Error(
+            `Gagal menyimpan data pembayaran: ${
+              updateError.message || rpcError.message
+            }`
+          );
         }
       }
 
-      setSuccessMsg("Bukti pembayaran berhasil diunggah! Menunggu verifikasi admin.");
-      setTimeout(() => {
-        onSuccess();
-        onClose();
-      }, 1200);
+      toast.success(
+        "Bukti pembayaran berhasil diunggah. Menunggu verifikasi admin."
+      );
+      onSuccess();
+      onClose();
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : "Terjadi kesalahan saat mengunggah bukti.");
+      setErrorMsg(
+        err instanceof Error
+          ? err.message
+          : "Terjadi kesalahan saat mengunggah bukti."
+      );
     } finally {
       setUploading(false);
     }
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in"
-      role="dialog"
-      aria-modal="true"
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open && !uploading) onClose();
+      }}
     >
-      <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[90vh]">
-        {/* Header */}
-        <div className="px-6 py-4.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-brand-50 text-brand-600">
-              <Upload className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-slate-900">
+      <DialogContent
+        className="flex max-h-[90vh] w-[calc(100vw-2rem)] max-w-lg flex-col gap-0 overflow-hidden p-0"
+        onEscapeKeyDown={(event) => {
+          if (uploading) event.preventDefault();
+        }}
+      >
+        <DialogHeader className="shrink-0 border-b bg-muted/30 px-6 py-4 pr-14">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+              <Upload className="h-5 w-5" />
+            </span>
+            <div className="min-w-0 space-y-1">
+              <DialogTitle className="break-words">
                 Unggah Bukti Pembayaran
-              </h2>
-              <p className="text-xs text-slate-500">
+              </DialogTitle>
+              <DialogDescription>
                 Lembaga Kursus Pijar Aksara
-              </p>
+              </DialogDescription>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            disabled={uploading}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+        </DialogHeader>
 
-        {/* Content Form */}
-        <form onSubmit={handleUpload} className="p-6 space-y-5 overflow-y-auto">
-          {/* Ringkasan Tagihan */}
-          <div className="p-4 rounded-2xl bg-brand-50/50 border border-brand-100/80 space-y-1">
-            <span className="text-xs text-slate-500 block">Kursus yang Didaftarkan:</span>
-            <h4 className="text-sm font-extrabold text-slate-900 line-clamp-1">{kursusJudul}</h4>
-            <div className="flex items-center justify-between pt-2 border-t border-brand-100/60 text-xs">
-              <span className="text-slate-600 font-medium">Total Nominal Transfer:</span>
-              <span className="text-base font-black text-brand-700">{formatRupiah(nominal)}</span>
+        <form
+          onSubmit={handleUpload}
+          className="flex min-h-0 min-w-0 flex-1 flex-col"
+        >
+          <div className="min-h-0 min-w-0 flex-1 space-y-5 overflow-y-auto overflow-x-hidden px-6 py-5">
+          <div className="space-y-1 rounded-lg border bg-muted/30 p-4">
+            <span className="block text-xs text-muted-foreground">
+              Kursus yang Didaftarkan
+            </span>
+            <p className="line-clamp-1 text-sm font-semibold">{kursusJudul}</p>
+            <div className="flex items-center justify-between gap-3 border-t pt-2 text-xs">
+              <span className="text-muted-foreground">
+                Total Nominal Transfer
+              </span>
+              <span className="text-base font-semibold">
+                {formatRupiah(nominal)}
+              </span>
             </div>
           </div>
 
           {errorMsg && (
-            <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
-              <span>{errorMsg}</span>
-            </div>
+            <Alert variant="destructive">
+              <AlertDescription>{errorMsg}</AlertDescription>
+            </Alert>
           )}
 
-          {successMsg && (
-            <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-              <span>{successMsg}</span>
-            </div>
-          )}
-
-          {/* Area Upload File */}
           <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-              Berkas Bukti Transfer / Struk Bank <span className="text-rose-500">*</span>
-            </label>
+            <Label htmlFor="bukti-pembayaran">
+              Berkas Bukti Transfer / Struk Bank{" "}
+              <span className="text-destructive">*</span>
+            </Label>
 
             <input
+              id="bukti-pembayaran"
               type="file"
               ref={fileInputRef}
               onChange={handleFileChange}
@@ -227,101 +263,114 @@ export function ModalUploadBuktiPembayaran({
               className="hidden"
             />
 
-            <div
+            <button
+              type="button"
               onClick={() => fileInputRef.current?.click()}
-              className={`border-2 border-dashed rounded-2xl p-5 text-center cursor-pointer transition ${
+              className={`w-full rounded-lg border-2 border-dashed p-5 text-center transition ${
                 selectedFile || previewUrl
                   ? "border-emerald-400 bg-emerald-50/30"
-                  : "border-slate-200 hover:border-brand-400 hover:bg-slate-50"
+                  : "border-input hover:border-primary/50 hover:bg-muted/30"
               }`}
             >
               {previewUrl ? (
-                <div className="space-y-3">
-                  <div className="relative mx-auto max-h-48 rounded-xl overflow-hidden border border-slate-200 bg-slate-100 flex items-center justify-center">
+                <span className="block space-y-3">
+                  <span className="mx-auto flex max-h-48 max-w-full items-center justify-center overflow-hidden rounded-md border bg-muted">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={previewUrl}
                       alt="Preview Bukti Pembayaran"
                       className="max-h-48 object-contain"
                     />
-                  </div>
-                  <div className="flex items-center justify-center gap-2 text-xs font-semibold text-emerald-700">
-                    <FileCheck className="w-4 h-4" />
-                    <span>{selectedFile ? selectedFile.name : "Bukti pembayaran siap diunggah"}</span>
-                  </div>
-                  <span className="text-[11px] text-slate-400 block">Klik untuk memilih berkas gambar lain</span>
-                </div>
+                  </span>
+                  <span className="flex items-center justify-center gap-2 text-xs font-medium text-emerald-700">
+                    <FileCheck className="h-4 w-4" />
+                    <span className="truncate">
+                      {selectedFile
+                        ? selectedFile.name
+                        : "Bukti pembayaran siap diunggah"}
+                    </span>
+                  </span>
+                  <span className="block text-[11px] text-muted-foreground">
+                    Klik untuk memilih berkas gambar lain
+                  </span>
+                </span>
               ) : selectedFile ? (
-                <div className="space-y-2 py-2">
-                  <FileCheck className="w-8 h-8 text-emerald-600 mx-auto" />
-                  <p className="text-xs font-bold text-slate-800">{selectedFile.name}</p>
-                  <p className="text-[11px] text-slate-500">
-                    {(selectedFile.size / 1024).toFixed(0)} KB • Klik untuk mengganti
-                  </p>
-                </div>
+                <span className="block space-y-2 py-2">
+                  <FileCheck className="mx-auto h-8 w-8 text-emerald-600" />
+                  <span className="block truncate text-xs font-medium">
+                    {selectedFile.name}
+                  </span>
+                  <span className="block text-[11px] text-muted-foreground">
+                    {(selectedFile.size / 1024).toFixed(0)} KB • Klik untuk
+                    mengganti
+                  </span>
+                </span>
               ) : (
-                <div className="space-y-2 py-3">
-                  <div className="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center mx-auto">
-                    <ImageIcon className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <span className="text-xs font-bold text-brand-700 hover:underline">
+                <span className="block space-y-2 py-3">
+                  <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary">
+                    <ImageIcon className="h-5 w-5" />
+                  </span>
+                  <span className="block">
+                    <span className="text-xs font-medium text-primary hover:underline">
                       Pilih foto atau dokumen struk transfer
                     </span>
-                    <span className="text-xs text-slate-500 block mt-0.5">
+                    <span className="mt-0.5 block text-xs text-muted-foreground">
                       JPG, PNG, WEBP, atau PDF (Maks. 5 MB)
                     </span>
-                  </div>
-                </div>
+                  </span>
+                </span>
               )}
-            </div>
+            </button>
           </div>
 
-          {/* Form Catatan / Rekening Pengirim */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+            <Label htmlFor="catatan-pembayaran">
               Catatan Pengirim (Opsional)
-            </label>
-            <input
+            </Label>
+            <Input
+              id="catatan-pembayaran"
               type="text"
               value={catatan}
               onChange={(e) => setCatatan(e.target.value)}
               placeholder="Contoh: Transfer via BCA an Rizki Pratama"
-              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-800 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-hidden transition"
             />
-            <p className="text-[11px] text-slate-400">
-              Sertakan nama pemilik rekening atau bank pengirim untuk mempercepat proses verifikasi oleh Admin.
+            <p className="text-[11px] text-muted-foreground">
+              Sertakan nama pemilik rekening atau bank pengirim untuk
+              mempercepat proses verifikasi oleh Admin.
             </p>
           </div>
+          </div>
 
-          {/* Tombol Aksi */}
-          <div className="pt-2 flex items-center gap-3">
-            <button
+          <DialogFooter className="shrink-0 flex-col gap-2 border-t bg-muted/30 px-6 py-4 sm:flex-row sm:justify-end sm:space-x-0">
+            <Button
               type="button"
+              variant="outline"
               onClick={onClose}
               disabled={uploading}
-              className="flex-1 py-2.5 px-4 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+              className="w-full sm:w-auto sm:flex-1"
             >
               Tutup
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               disabled={uploading || (!selectedFile && !currentBuktiUrl)}
-              className="flex-1 py-2.5 px-4 rounded-xl bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white text-xs font-bold shadow-md shadow-brand-500/20 transition flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full sm:w-auto sm:flex-1"
             >
               {uploading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> Mengunggah...
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Mengunggah...
                 </>
               ) : (
                 <>
-                  <Upload className="w-4 h-4" /> Simpan &amp; Kirim Bukti
+                  <Upload className="h-4 w-4" />
+                  Simpan &amp; Kirim Bukti
                 </>
               )}
-            </button>
-          </div>
+            </Button>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

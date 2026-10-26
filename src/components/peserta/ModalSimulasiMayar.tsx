@@ -1,15 +1,25 @@
 "use client";
 
-import React, { useState } from "react";
+import { useEffect, useState } from "react";
 import {
-  X,
+  CheckCircle2,
   CreditCard,
+  Loader2,
   QrCode,
   ShieldCheck,
-  CheckCircle2,
-  AlertCircle,
-  Loader2,
 } from "lucide-react";
+
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export interface MayarSimulasiData {
   id: string;
@@ -35,6 +45,13 @@ export function ModalSimulasiMayar({
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (isOpen) {
+      setErrorMsg(null);
+      setLoading(false);
+    }
+  }, [isOpen, data?.id]);
+
   if (!isOpen || !data) return null;
 
   const formatRupiah = (val: number) => {
@@ -57,116 +74,131 @@ export function ModalSimulasiMayar({
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || "Gagal memproses simulasi pembayaran Mayar.");
+        throw new Error(
+          result.error || "Gagal memproses simulasi pembayaran Mayar."
+        );
       }
 
-      onSuccess(result.message || "Simulasi pembayaran Mayar berhasil! Akses kursus telah dibuka.");
+      onSuccess(
+        result.message ||
+          "Simulasi pembayaran Mayar berhasil! Akses kursus telah dibuka."
+      );
       onClose();
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : "Terjadi kesalahan sistem.");
+      setErrorMsg(
+        err instanceof Error ? err.message : "Terjadi kesalahan sistem."
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-150"
-      role="dialog"
-      aria-modal="true"
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open && !loading) onClose();
+      }}
     >
-      <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-amber-50/60">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-amber-100 text-amber-800">
-              <CreditCard className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-slate-900">
+      <DialogContent
+        className="flex max-h-[90vh] w-[calc(100vw-2rem)] max-w-md flex-col gap-0 overflow-hidden p-0"
+        onEscapeKeyDown={(event) => {
+          if (loading) event.preventDefault();
+        }}
+      >
+        <DialogHeader className="shrink-0 border-b bg-highlight/30 px-6 py-4 pr-14">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-highlight text-highlight-foreground">
+              <CreditCard className="h-5 w-5" />
+            </span>
+            <div className="min-w-0 space-y-1">
+              <DialogTitle className="break-words">
                 Gerbang Pembayaran Mayar
-              </h2>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-100 text-brand-800 uppercase tracking-wider">
+              </DialogTitle>
+              <DialogDescription>
+                Selesaikan pembayaran pendaftaran kursus Anda.
+              </DialogDescription>
+              <Badge variant="highlight" className="w-fit">
                 Verifikasi Langsung
-              </span>
+              </Badge>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            disabled={loading}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+        </DialogHeader>
 
-        {/* Body */}
-        <div className="p-6 space-y-4">
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1.5">
-            <span className="text-xs text-slate-500 block">Pendaftaran Kursus:</span>
-            <span className="text-sm font-bold text-slate-900 block leading-snug">
+        <div className="min-h-0 min-w-0 flex-1 space-y-4 overflow-y-auto overflow-x-hidden px-6 py-5">
+          <div className="space-y-1.5 rounded-lg border bg-muted/30 p-4">
+            <span className="block text-xs text-muted-foreground">
+              Pendaftaran Kursus
+            </span>
+            <span className="block text-sm font-semibold leading-snug">
               {data.kursus?.judul || "Kursus"}
             </span>
-            <div className="flex justify-between items-baseline pt-2 border-t border-slate-200">
-              <span className="text-xs text-slate-600">Nominal Tagihan:</span>
-              <span className="text-lg font-extrabold text-brand-700">
+            <div className="flex items-baseline justify-between gap-3 border-t pt-2">
+              <span className="text-xs text-muted-foreground">
+                Nominal Tagihan
+              </span>
+              <span className="text-lg font-semibold">
                 {formatRupiah(data.nominal)}
               </span>
             </div>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-brand-50/80 border border-brand-200/80 text-xs text-brand-900 space-y-1">
-            <p className="font-bold flex items-center gap-1.5">
-              <ShieldCheck className="w-4 h-4 text-brand-700" /> Kanal Pembayaran Terintegrasi
+          <div className="space-y-1 rounded-lg border border-primary/20 bg-primary/5 p-3.5 text-xs">
+            <p className="flex items-center gap-1.5 font-medium">
+              <ShieldCheck className="h-4 w-4 text-primary" />
+              Kanal Pembayaran Terintegrasi
             </p>
-            <p className="text-brand-800 leading-relaxed text-[11px]">
-              Sistem telah terhubung dengan kanal Mayar. Klik tombol di bawah untuk menyelesaikan proses verifikasi pembayaran pendaftaran kursus Anda secara instan.
+            <p className="leading-relaxed text-muted-foreground">
+              Sistem telah terhubung dengan kanal Mayar. Klik tombol di bawah
+              untuk menyelesaikan proses verifikasi pembayaran pendaftaran
+              kursus Anda secara instan.
             </p>
           </div>
 
           {errorMsg && (
-            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
-              <span>{errorMsg}</span>
-            </div>
+            <Alert variant="destructive">
+              <AlertDescription>{errorMsg}</AlertDescription>
+            </Alert>
           )}
 
-          <div className="p-3 rounded-xl border border-dashed border-slate-300 text-center space-y-2">
-            <QrCode className="w-12 h-12 text-slate-400 mx-auto" />
-            <p className="text-xs font-semibold text-slate-600">
-              Kanal Pembayaran QRIS / Virtual Account & E-Wallet
+          <div className="space-y-2 rounded-lg border border-dashed p-4 text-center">
+            <QrCode className="mx-auto h-12 w-12 text-muted-foreground" />
+            <p className="text-xs font-medium text-muted-foreground">
+              Kanal Pembayaran QRIS / Virtual Account &amp; E-Wallet
             </p>
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center gap-3">
-          <button
+        <DialogFooter className="shrink-0 flex-col gap-2 border-t bg-muted/30 px-6 py-4 sm:flex-row sm:space-x-0">
+          <Button
             type="button"
+            variant="outline"
             onClick={onClose}
             disabled={loading}
-            className="flex-1 py-2.5 px-4 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition"
+            className="sm:flex-1"
           >
             Batal
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             onClick={handleSimulasiBayar}
             disabled={loading}
-            className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-sm transition disabled:opacity-50"
+            className="bg-highlight text-highlight-foreground hover:bg-highlight/80 sm:flex-1"
           >
             {loading ? (
               <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Memproses...
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Memproses...
               </>
             ) : (
               <>
-                <CheckCircle2 className="w-3.5 h-3.5" /> Konfirmasi Pembayaran Selesai
+                <CheckCircle2 className="h-4 w-4" />
+                Konfirmasi Pembayaran Selesai
               </>
             )}
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
