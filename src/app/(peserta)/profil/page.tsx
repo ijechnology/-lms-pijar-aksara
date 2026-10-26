@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import Navbar from "@/components/layout/Navbar";
 import { useAuth } from "@/context/AuthContext";
 import { createClient } from "@/lib/supabase/client";
 import AlertModal from "@/components/ui/AlertModal";
@@ -319,7 +318,6 @@ export default function ProfilPesertaPage() {
 
     return (
       <div className="min-h-screen flex flex-col bg-slate-50">
-        <Navbar />
 
         <main className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-8">
           <div>
@@ -649,7 +647,6 @@ export default function ProfilPesertaPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
-      <Navbar />
 
       <main className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-8">
         <div>

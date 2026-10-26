@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import Navbar from "@/components/layout/Navbar";
 import { KursusItem } from "@/components/kursus/KursusCard";
 import { createClient } from "@/lib/supabase/client";
 
@@ -164,7 +163,6 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
-      <Navbar />
 
       {/* 1. Hero Section Modern ala Ruangguru & Zenius */}
       <HeroSection />

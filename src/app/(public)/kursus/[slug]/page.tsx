@@ -2,7 +2,6 @@ import React from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
-import Navbar from "@/components/layout/Navbar";
 import {
   BookOpen,
   Clock,
@@ -255,7 +254,6 @@ export default async function KursusDetailPage({
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
-      <Navbar />
 
       {/* Breadcrumb Header */}
       <div className="bg-white border-b border-slate-200 py-3.5">

@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
-import Navbar from "@/components/layout/Navbar";
 import { useAuth } from "@/context/AuthContext";
 import { createClient } from "@/lib/supabase/client";
 import ConfirmModal from "@/components/ui/ConfirmModal";
@@ -431,7 +430,6 @@ export default function KursusSayaPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
-      <Navbar />
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-8">
         {/* Header Ruang Kursus Saya */}

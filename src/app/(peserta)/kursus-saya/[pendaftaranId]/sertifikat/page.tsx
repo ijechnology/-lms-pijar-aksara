@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import Navbar from "@/components/layout/Navbar";
 import SertifikatView, { SertifikatData } from "@/components/peserta/SertifikatView";
 import { useAuth } from "@/context/AuthContext";
 import { createClient } from "@/lib/supabase/client";
@@ -94,7 +93,6 @@ export default function SertifikatPage() {
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 print:bg-white print:min-h-0 print:block print:p-0 print:m-0">
       <div className="no-print">
-        <Navbar />
       </div>
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10 print:p-0 print:m-0 print:max-w-none print:w-full print:block">

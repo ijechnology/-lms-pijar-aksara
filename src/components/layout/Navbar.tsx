@@ -1,277 +1,318 @@
 "use client";
 
-import React, { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
 import {
   BookOpen,
+  ChevronDown,
   GraduationCap,
+  HelpCircle,
   LayoutDashboard,
-  ShieldAlert,
   LogOut,
-  User,
   Menu,
-  X,
-  Sparkles,
+  ShieldCheck,
 } from "lucide-react";
+
+import { useAuth } from "@/context/AuthContext";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
+
+type NavLink = {
+  href: string;
+  label: string;
+  icon: typeof BookOpen;
+};
+
+function initials(name?: string | null, email?: string | null) {
+  const source = name?.trim() || email?.split("@")[0] || "PA";
+  return source
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
+function roleLabel(role: string | null) {
+  if (role === "admin") return "Admin";
+  if (role === "instruktur") return "Instruktur";
+  if (role === "peserta") return "Peserta";
+  return null;
+}
+
+function isLinkActive(pathname: string, href: string) {
+  if (href.includes("#")) return false;
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
 
 export default function Navbar() {
   const { user, profile, role, isLoading, signOut } = useAuth();
   const pathname = usePathname();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-  const getRoleBadge = (r: string | null) => {
-    switch (r) {
-      case "admin":
-        return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-800 border border-rose-200">
-            Admin
-          </span>
-        );
-      case "instruktur":
-        return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800 border border-indigo-200">
-            Instruktur
-          </span>
-        );
-      case "peserta":
-        return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
-            Peserta
-          </span>
-        );
-      default:
-        return null;
-    }
-  };
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
 
-  const navLinks = [
-    { href: "/kursus", label: "Katalog Kursus", icon: BookOpen, show: true },
-    {
-      href: "/kursus-saya",
-      label: "Kursus Saya",
-      icon: GraduationCap,
-      show: role === "peserta",
-    },
-    {
-      href: "/instruktur/kursus",
-      label: "Kelola Kursus",
-      icon: LayoutDashboard,
-      show: role === "instruktur",
-    },
-    {
-      href: "/admin",
-      label: "Panel Admin",
-      icon: ShieldAlert,
-      show: role === "admin",
-    },
-    {
-      href: "/admin/dashboard",
-      label: "Dasbor Analitik",
-      icon: LayoutDashboard,
-      show: role === "admin",
-    },
-  ];
+  const links: NavLink[] =
+    role === "admin"
+      ? [{ href: "/admin/dashboard", label: "Panel Admin", icon: ShieldCheck }]
+      : role === "instruktur"
+        ? [
+            { href: "/kursus", label: "Katalog", icon: BookOpen },
+            {
+              href: "/instruktur/kursus",
+              label: "Kelola Kursus",
+              icon: LayoutDashboard,
+            },
+          ]
+        : role === "peserta"
+          ? [
+              { href: "/kursus", label: "Katalog", icon: BookOpen },
+              { href: "/kursus-saya", label: "Kursus Saya", icon: GraduationCap },
+            ]
+          : [
+              { href: "/kursus", label: "Katalog", icon: BookOpen },
+              { href: "/#faq", label: "FAQ", icon: HelpCircle },
+            ];
+
+  const displayName = profile?.nama_lengkap || user?.email?.split("@")[0] || "Akun";
+  const panelHref =
+    role === "admin"
+      ? "/admin/dashboard"
+      : role === "instruktur"
+        ? "/instruktur/kursus"
+        : "/kursus-saya";
 
   return (
-    <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-sm transition">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16 items-center">
-          {/* Logo & Brand */}
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-700 to-brand-500 flex items-center justify-center text-white font-extrabold shadow-md shadow-brand-500/20 group-hover:scale-105 transition">
-              PA
-            </div>
-            <div>
-              <span className="font-bold text-lg tracking-tight text-slate-900 group-hover:text-brand-600 transition block leading-tight">
-                Pijar Aksara
-              </span>
-              <span className="text-[11px] text-slate-500 tracking-wide block">
-                Lembaga Kursus Depok
-              </span>
-            </div>
-          </Link>
+    <header className="sticky top-0 z-40 h-16 border-b bg-background/80 backdrop-blur print:hidden">
+      <div className="mx-auto flex h-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+        <Link href="/" className="flex min-w-0 items-center gap-2.5">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary text-sm font-bold tracking-tight text-primary-foreground">
+            PA
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate text-base font-semibold tracking-tight text-foreground">
+              Pijar Aksara
+            </span>
+            <span className="hidden text-[11px] leading-tight text-muted-foreground sm:block">
+              Lembaga Kursus Depok
+            </span>
+          </span>
+        </Link>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-1">
-            {navLinks
-              .filter((item) => item.show)
-              .map((link) => {
-                const isActive =
-                  link.href === "/"
-                    ? pathname === "/"
-                    : link.href === "/admin"
-                    ? pathname === "/admin"
-                    : pathname === link.href || pathname.startsWith(link.href + "/");
-                const Icon = link.icon;
-                return (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition ${
-                      isActive
-                        ? "bg-brand-50 text-brand-700 font-semibold"
-                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/70"
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    {link.label}
-                  </Link>
-                );
-              })}
-          </nav>
+        <nav className="hidden items-center gap-1 md:flex" aria-label="Navigasi utama">
+          {links.map((link) => {
+            const active = isLinkActive(pathname, link.href);
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "relative px-3 py-2 text-sm font-medium transition-colors hover:text-foreground",
+                  active ? "text-primary" : "text-muted-foreground"
+                )}
+              >
+                {link.label}
+                {active && (
+                  <span className="absolute inset-x-3 -bottom-[13px] h-0.5 rounded-full bg-primary" />
+                )}
+              </Link>
+            );
+          })}
+        </nav>
 
-          {/* Desktop Right Auth Section */}
-          <div className="hidden md:flex items-center gap-3">
-            {isLoading ? (
-              <div className="w-24 h-8 bg-slate-100 animate-pulse rounded-lg" />
-            ) : user ? (
-              <div className="flex items-center gap-3 pl-2 border-l border-slate-200">
-                <Link
-                  href="/profil"
-                  className="flex items-center gap-2.5 text-right hover:bg-slate-100/80 px-2.5 py-1.5 rounded-xl transition group cursor-pointer"
-                  title="Profil & Pengaturan Akun"
-                >
-                  <div>
-                    <div className="text-sm font-semibold text-slate-800 group-hover:text-brand-600 leading-tight">
-                      {profile?.nama_lengkap || user.email?.split("@")[0]}
-                    </div>
-                    <div className="mt-0.5">{getRoleBadge(role)}</div>
-                  </div>
-                  <div className="w-8 h-8 rounded-full bg-brand-50 border border-brand-200 text-brand-700 flex items-center justify-center font-bold text-xs group-hover:bg-brand-600 group-hover:text-white transition">
-                    <User className="w-4 h-4" />
-                  </div>
-                </Link>
-
+        <div className="hidden items-center gap-2 md:flex">
+          {isLoading ? (
+            <Skeleton className="h-8 w-24 rounded-full" />
+          ) : user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
                 <button
-                  onClick={signOut}
-                  title="Keluar Akun"
-                  className="p-2 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                  type="button"
+                  className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2 transition-colors hover:bg-accent"
+                  aria-label="Buka menu akun"
                 >
-                  <LogOut className="w-5 h-5" />
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
+                      {initials(profile?.nama_lengkap, user.email)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="max-w-28 truncate text-sm font-medium">
+                    {displayName}
+                  </span>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
                 </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <Link
-                  href="/masuk"
-                  className="px-4 py-2 text-sm font-semibold text-slate-700 hover:text-brand-600 hover:bg-slate-100 rounded-lg transition"
-                >
-                  Masuk
-                </Link>
-                <Link
-                  href="/daftar"
-                  className="px-4 py-2 text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-lg shadow-sm shadow-brand-500/30 transition flex items-center gap-1.5"
-                >
-                  <Sparkles className="w-3.5 h-3.5" /> Daftar Akun
-                </Link>
-              </div>
-            )}
-          </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel className="font-normal">
+                  <span className="block truncate text-sm font-semibold">
+                    {displayName}
+                  </span>
+                  <span className="block truncate text-xs text-muted-foreground">
+                    {user.email}
+                  </span>
+                  {roleLabel(role) && (
+                    <Badge variant="secondary" className="mt-2">
+                      {roleLabel(role)}
+                    </Badge>
+                  )}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/profil">Profil</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href={panelHref}>
+                    {role === "admin" ? "Panel Admin" : "Area Saya"}
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => void signOut()}>
+                  <LogOut className="h-4 w-4" />
+                  Keluar
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <>
+              <Button variant="ghost" asChild>
+                <Link href="/masuk">Masuk</Link>
+              </Button>
+              <Button asChild>
+                <Link href="/daftar">Daftar</Link>
+              </Button>
+            </>
+          )}
+        </div>
 
-          {/* Mobile Hamburger Button */}
-          <div className="flex items-center md:hidden">
+        <div className="flex items-center md:hidden">
+          {isLoading ? (
+            <Skeleton className="h-8 w-8 rounded-full" />
+          ) : (
             <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition"
-              aria-label="Toggle menu"
+              type="button"
+              onClick={() => setMobileOpen(true)}
+              className="flex h-9 w-9 items-center justify-center rounded-md transition-colors hover:bg-accent"
+              aria-label={user ? "Buka menu akun" : "Buka menu navigasi"}
             >
-              {mobileMenuOpen ? (
-                <X className="w-6 h-6" />
+              {user ? (
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
+                    {initials(profile?.nama_lengkap, user.email)}
+                  </AvatarFallback>
+                </Avatar>
               ) : (
-                <Menu className="w-6 h-6" />
+                <Menu className="h-5 w-5" />
               )}
             </button>
-          </div>
+          )}
         </div>
       </div>
 
-      {/* Mobile Drawer Menu */}
-      {mobileMenuOpen && (
-        <div className="md:hidden border-t border-slate-200 bg-white px-4 pt-3 pb-6 space-y-3">
-          <nav className="flex flex-col gap-1">
-            {navLinks
-              .filter((item) => item.show)
-              .map((link) => {
-                const isActive =
-                  link.href === "/"
-                    ? pathname === "/"
-                    : link.href === "/admin"
-                    ? pathname === "/admin"
-                    : pathname === link.href || pathname.startsWith(link.href + "/");
-                const Icon = link.icon;
-                return (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-base font-medium transition ${
-                      isActive
-                        ? "bg-brand-50 text-brand-700 font-semibold"
-                        : "text-slate-700 hover:bg-slate-50"
-                    }`}
-                  >
-                    <Icon className="w-5 h-5" />
-                    {link.label}
-                  </Link>
-                );
-              })}
+      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+        <SheetContent side="right" className="w-[86vw] max-w-sm">
+          <SheetHeader>
+            <SheetTitle>Menu</SheetTitle>
+          </SheetHeader>
+          <nav className="mt-6 flex flex-col gap-1" aria-label="Navigasi seluler">
+            {links.map((link) => {
+              const active = isLinkActive(pathname, link.href);
+              const Icon = link.icon;
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setMobileOpen(false)}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
+                    active
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                  {link.label}
+                </Link>
+              );
+            })}
           </nav>
 
-          <div className="pt-3 border-t border-slate-100">
-            {user ? (
-              <div className="space-y-3">
-                <Link
-                  href="/profil"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center justify-between px-3.5 py-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl transition"
-                  title="Profil & Pengaturan Akun"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-full bg-brand-50 border border-brand-200 text-brand-700 flex items-center justify-center font-bold text-xs">
-                      <User className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">
-                        {profile?.nama_lengkap || user.email}
-                      </p>
-                      <p className="text-xs text-slate-500">{user.email}</p>
-                    </div>
-                  </div>
-                  {getRoleBadge(role)}
-                </Link>
-                <button
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    signOut();
-                  }}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition"
-                >
-                  <LogOut className="w-4 h-4" /> Keluar Akun
-                </button>
+          <Separator className="my-5" />
+
+          {user ? (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-10 w-10">
+                  <AvatarFallback className="bg-primary/10 text-sm font-semibold text-primary">
+                    {initials(profile?.nama_lengkap, user.email)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold">{displayName}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {user.email}
+                  </p>
+                </div>
               </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-2">
-                <Link
-                  href="/masuk"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="text-center px-4 py-2.5 text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition"
+              {roleLabel(role) && (
+                <Badge variant="secondary">{roleLabel(role)}</Badge>
+              )}
+              <div className="grid gap-2">
+                <Button variant="outline" asChild>
+                  <Link href="/profil" onClick={() => setMobileOpen(false)}>
+                    Profil
+                  </Link>
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="justify-start text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  onClick={() => {
+                    setMobileOpen(false);
+                    void signOut();
+                  }}
                 >
+                  <LogOut className="h-4 w-4" />
+                  Keluar
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="outline" asChild>
+                <Link href="/masuk" onClick={() => setMobileOpen(false)}>
                   Masuk
                 </Link>
-                <Link
-                  href="/daftar"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="text-center px-4 py-2.5 text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-lg shadow transition"
-                >
+              </Button>
+              <Button asChild>
+                <Link href="/daftar" onClick={() => setMobileOpen(false)}>
                   Daftar
                 </Link>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+              </Button>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </header>
   );
 }

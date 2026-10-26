@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import Navbar from "@/components/layout/Navbar";
 import { KursusItem } from "@/components/kursus/KursusCard";
 import CourseCatalogSection from "@/components/landing/CourseCatalogSection";
 import { createClient } from "@/lib/supabase/client";
@@ -152,7 +151,6 @@ export default function KursusPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
-      <Navbar />
 
       {/* Konten Katalog Kursus Murni */}
       <main className="flex-1">
