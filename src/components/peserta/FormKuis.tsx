@@ -1,22 +1,40 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
 import {
-  HelpCircle,
-  Award,
   AlertCircle,
-  CheckCircle2,
-  XCircle,
-  RefreshCw,
-  Send,
-  Lock,
-  Sparkles,
   ArrowRight,
-  X,
+  Award,
+  CheckCircle2,
+  HelpCircle,
+  Loader2,
+  Lock,
   RotateCcw,
+  Send,
+  Sparkles,
+  XCircle,
 } from "lucide-react";
+
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import { createClient } from "@/lib/supabase/client";
 
 interface SoalItem {
   id: string;
@@ -40,6 +58,27 @@ interface FormKuisProps {
   nextUrutan?: number | null;
 }
 
+function KuisSkeleton() {
+  return (
+    <div className="space-y-4">
+      {Array.from({ length: 3 }).map((_, index) => (
+        <Card key={index}>
+          <CardHeader className="space-y-3 p-5">
+            <Skeleton className="h-5 w-3/4" />
+            <Skeleton className="h-4 w-1/2" />
+          </CardHeader>
+          <CardContent className="space-y-2 p-5 pt-0">
+            <Skeleton className="h-11 w-full" />
+            <Skeleton className="h-11 w-full" />
+            <Skeleton className="h-11 w-full" />
+            <Skeleton className="h-11 w-full" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
 export default function FormKuis({
   pendaftaranId,
   modulId,
@@ -52,6 +91,7 @@ export default function FormKuis({
   nextUrutan = null,
 }: FormKuisProps) {
   const supabase = createClient();
+  const submitButtonRef = useRef<HTMLButtonElement>(null);
 
   const [soalList, setSoalList] = useState<SoalItem[]>([]);
   const [jawaban, setJawaban] = useState<Record<string, string>>({});
@@ -62,6 +102,19 @@ export default function FormKuis({
   const [riwayatPercobaan, setRiwayatPercobaan] = useState<any[]>([]);
   const [hasilTerakhir, setHasilTerakhir] = useState<any | null>(null);
   const [modalHasilOpen, setModalHasilOpen] = useState(false);
+  const resultWasOpenRef = useRef(false);
+
+  useEffect(() => {
+    if (modalHasilOpen) {
+      resultWasOpenRef.current = true;
+      return;
+    }
+
+    if (resultWasOpenRef.current) {
+      resultWasOpenRef.current = false;
+      requestAnimationFrame(() => submitButtonRef.current?.focus());
+    }
+  }, [modalHasilOpen]);
 
   // Ambil riwayat percobaan dan daftar soal
   useEffect(() => {
@@ -111,8 +164,10 @@ export default function FormKuis({
 
   const jumlahPercobaan = riwayatPercobaan.length;
   const sisaPercobaan = Math.max(0, 3 - jumlahPercobaan);
-  const isSudahLulus = isLulusModul || riwayatPercobaan.some((r) => r.lulus);
+  const isSudahLulus =
+    isLulusModul || riwayatPercobaan.some((r) => r.lulus);
   const isPercobaanHabis = jumlahPercobaan >= 3 && !isSudahLulus;
+  const isResultDialogOpen = modalHasilOpen && Boolean(hasilTerakhir);
 
   const handlePilihJawaban = (soalId: string, opsi: string) => {
     setJawaban((prev) => ({
@@ -128,7 +183,9 @@ export default function FormKuis({
     // Validasi semua soal wajib dijawab (BR-09)
     const belumDijawab = soalList.filter((s) => !jawaban[s.id]);
     if (belumDijawab.length > 0) {
-      const nomorList = belumDijawab.map((s) => `Nomor ${s.urutan}`).join(", ");
+      const nomorList = belumDijawab
+        .map((s) => `Nomor ${s.urutan}`)
+        .join(", ");
       setErrorMsg(
         `Terdapat ${belumDijawab.length} butir soal yang belum dijawab (${nomorList}). Semua soal wajib dijawab sebelum mengirimkan kuis!`
       );
@@ -157,6 +214,7 @@ export default function FormKuis({
       }
 
       setHasilTerakhir(data);
+      submitButtonRef.current?.focus();
       setModalHasilOpen(true);
 
       // Perbarui riwayat
@@ -178,7 +236,10 @@ export default function FormKuis({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ pendaftaran_id: pendaftaranId }),
         }).catch((certEmailErr) => {
-          console.error("Gagal mengirim email notifikasi sertifikat:", certEmailErr);
+          console.error(
+            "Gagal mengirim email notifikasi sertifikat:",
+            certEmailErr
+          );
         });
       }
 
@@ -186,7 +247,8 @@ export default function FormKuis({
         onLulusSuccess();
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Terjadi kesalahan evaluasi kuis.";
+      const msg =
+        err instanceof Error ? err.message : "Terjadi kesalahan evaluasi kuis.";
       setErrorMsg(msg);
     } finally {
       setSubmitting(false);
@@ -196,226 +258,245 @@ export default function FormKuis({
   // 1. Kondisi jika materi belum ditandai dibaca (BR-08)
   if (!materiDibacaPada) {
     return (
-      <div className="p-6 sm:p-8 rounded-2xl bg-amber-50/70 border border-amber-200/80 text-center space-y-3">
-        <Lock className="w-8 h-8 text-amber-600 mx-auto" />
-        <h4 className="font-bold text-slate-800 text-base">
-          Kuis Masih Terkunci
-        </h4>
-        <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto">
-          Silakan pelajari materi bacaan dan video di atas, kemudian tekan tombol{" "}
-          <span className="font-bold text-brand-700">
-            &quot;Tandai Materi Sudah Dibaca&quot;
-          </span>{" "}
-          untuk membuka lembar evaluasi kuis modul ini.
-        </p>
-      </div>
+      <Card className="border-highlight bg-highlight/40">
+        <CardContent className="flex flex-col items-center gap-3 p-6 text-center sm:p-8">
+          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-highlight text-highlight-foreground">
+            <Lock className="h-5 w-5" />
+          </span>
+          <div className="space-y-2">
+            <h4 className="text-base font-semibold text-highlight-foreground">
+              Kuis Masih Terkunci
+            </h4>
+            <p className="mx-auto max-w-md text-sm leading-relaxed text-highlight-foreground/80">
+              Silakan pelajari materi bacaan dan video di atas, kemudian tekan
+              tombol{" "}
+              <span className="font-semibold text-highlight-foreground">
+                &quot;Tandai Materi Sudah Dibaca&quot;
+              </span>{" "}
+              untuk membuka lembar evaluasi kuis modul ini.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   // 2. Kondisi jika modul sudah lulus (INV-04: Modul lulus tidak bisa diuji ulang)
-  if (isSudahLulus) {
+  if (isSudahLulus && !isResultDialogOpen) {
     const highestScore = Math.max(
       ...riwayatPercobaan.map((r) => r.nilai),
       nilaiLulus
     );
 
-    const isCourseFinished = isAllModulLulus || (isFinalModul && isSudahLulus);
+    const isCourseFinished =
+      isAllModulLulus || (isFinalModul && isSudahLulus);
 
     if (isCourseFinished) {
       return (
-        <div className="p-6 sm:p-10 rounded-2xl bg-gradient-to-b from-emerald-50 to-teal-50/50 border-2 border-emerald-300 text-center space-y-5 shadow-sm">
-          <div className="w-16 h-16 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto shadow-inner">
-            <Award className="w-8 h-8" />
-          </div>
-          <div className="space-y-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
-              <Sparkles className="w-3.5 h-3.5" /> Program Pelatihan Selesai
+        <Card className="border-emerald-200 bg-emerald-50">
+          <CardContent className="flex flex-col items-center gap-5 p-6 text-center sm:p-10">
+            <span className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+              <Award className="h-8 w-8" />
             </span>
-            <h4 className="font-extrabold text-slate-900 text-xl sm:text-2xl">
-              🎉 Selamat! Anda Telah Menyelesaikan Seluruh Kursus
-            </h4>
-            <p className="text-xs sm:text-sm text-emerald-900 max-w-lg mx-auto leading-relaxed">
-              Seluruh modul dan kuis evaluasi berhasil Anda tuntaskan dengan predikat kelulusan. Nilai kelulusan modul ini: <span className="font-extrabold">{highestScore} / 100</span>. Dokumen sertifikat resmi ber-SK Lembaga Pijar Aksara telah diterbitkan untuk Anda.
-            </p>
-          </div>
+            <div className="space-y-2">
+              <Badge
+                variant="secondary"
+                className="border-emerald-200 bg-emerald-100 text-emerald-800"
+              >
+                <Sparkles className="mr-1 h-3.5 w-3.5" />
+                Program Pelatihan Selesai
+              </Badge>
+              <h4 className="text-xl font-semibold text-emerald-950 sm:text-2xl">
+                Selamat! Anda Telah Menyelesaikan Seluruh Kursus
+              </h4>
+              <p className="mx-auto max-w-lg text-sm leading-relaxed text-emerald-900">
+                Seluruh modul dan kuis evaluasi berhasil Anda tuntaskan dengan
+                predikat kelulusan. Nilai kelulusan modul ini:{" "}
+                <span className="font-semibold">{highestScore} / 100</span>.
+                Dokumen sertifikat resmi ber-SK Lembaga Pijar Aksara telah
+                diterbitkan untuk Anda.
+              </p>
+            </div>
 
-          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link
-              href={`/kursus-saya/${pendaftaranId}/sertifikat`}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm shadow-lg shadow-emerald-600/25 transition group"
+            <Button
+              asChild
+              className="bg-emerald-600 text-white hover:bg-emerald-700"
             >
-              <Award className="w-4 h-4 group-hover:scale-110 transition" />
-              <span>Buka &amp; Cetak Sertifikat Kelulusan Resmi</span>
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
-            </Link>
-          </div>
-        </div>
+              <Link href={`/kursus-saya/${pendaftaranId}/sertifikat`}>
+                <Award />
+                Buka &amp; Cetak Sertifikat Kelulusan Resmi
+                <ArrowRight />
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
       );
     }
 
     return (
-      <div className="p-6 sm:p-8 rounded-2xl bg-emerald-50 border border-emerald-200 text-center space-y-4">
-        <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto shadow-inner">
-          <Award className="w-6 h-6" />
-        </div>
-        <div className="space-y-1">
-          <h4 className="font-extrabold text-slate-900 text-lg">
-            Selamat! Anda Telah Lulus Modul Ini
-          </h4>
-          <p className="text-xs sm:text-sm text-emerald-800">
-            Nilai Terbaik: <span className="font-extrabold text-base">{highestScore}</span> / 100 (Syarat Lulus: {nilaiLulus})
-          </p>
-        </div>
-        <p className="text-xs text-slate-600 max-w-md mx-auto">
-          Sesuai aturan kurikulum, kuis pada modul yang telah berstatus lulus tidak dapat diulang kembali. Silakan lanjutkan belajar ke modul berikutnya.
-        </p>
-        {nextUrutan && (
-          <div className="pt-2">
-            <Link
-              href={`/kursus-saya/${pendaftaranId}/modul/${nextUrutan}`}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-md shadow-brand-500/20 transition group"
-            >
-              <span>Lanjut ke Modul {nextUrutan}</span>
-              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition" />
-            </Link>
+      <Card className="border-emerald-200 bg-emerald-50">
+        <CardContent className="flex flex-col items-center gap-4 p-6 text-center sm:p-8">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+            <Award className="h-6 w-6" />
+          </span>
+          <div className="space-y-1">
+            <h4 className="text-lg font-semibold text-emerald-950">
+              Selamat! Anda Telah Lulus Modul Ini
+            </h4>
+            <p className="text-sm text-emerald-800">
+              Nilai Terbaik:{" "}
+              <span className="text-base font-semibold">{highestScore}</span> /
+              100 (Syarat Lulus: {nilaiLulus})
+            </p>
           </div>
-        )}
-      </div>
+          <p className="mx-auto max-w-md text-sm leading-relaxed text-muted-foreground">
+            Sesuai aturan kurikulum, kuis pada modul yang telah berstatus lulus
+            tidak dapat diulang kembali. Silakan lanjutkan belajar ke modul
+            berikutnya.
+          </p>
+          {nextUrutan && (
+            <Button asChild>
+              <Link
+                href={`/kursus-saya/${pendaftaranId}/modul/${nextUrutan}`}
+              >
+                Lanjut ke Modul {nextUrutan}
+                <ArrowRight />
+              </Link>
+            </Button>
+          )}
+        </CardContent>
+      </Card>
     );
   }
 
   // 3. Kondisi jika batas 3 kali percobaan habis (BR-10)
-  if (isPercobaanHabis) {
+  if (isPercobaanHabis && !isResultDialogOpen) {
     return (
-      <div className="p-6 sm:p-8 rounded-2xl bg-rose-50 border border-rose-200 text-center space-y-4">
-        <div className="w-12 h-12 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center mx-auto">
-          <XCircle className="w-6 h-6" />
-        </div>
-        <div className="space-y-1">
-          <h4 className="font-extrabold text-slate-900 text-lg">
-            Batas Percobaan Kuis Telah Habis
-          </h4>
-          <p className="text-xs sm:text-sm text-rose-800">
-            Anda telah menggunakan seluruh 3 kali batas percobaan untuk modul ini tanpa mencapai nilai kelulusan {nilaiLulus}.
-          </p>
-        </div>
-        <div className="p-3 bg-white rounded-xl border border-rose-100 max-w-xs mx-auto text-xs text-slate-600 space-y-1">
-          <span className="font-semibold block text-slate-700">Riwayat Nilai:</span>
-          {riwayatPercobaan.map((r) => (
-            <div key={r.nomor_percobaan} className="flex justify-between">
-              <span>Percobaan ke-{r.nomor_percobaan}:</span>
-              <span className="font-bold text-rose-600">{r.nilai} / 100</span>
-            </div>
-          ))}
-        </div>
-      </div>
+      <Card className="border-destructive/30 bg-destructive/5">
+        <CardContent className="flex flex-col items-center gap-4 p-6 text-center sm:p-8">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+            <XCircle className="h-6 w-6" />
+          </span>
+          <div className="space-y-1">
+            <h4 className="text-lg font-semibold text-foreground">
+              Batas Percobaan Kuis Telah Habis
+            </h4>
+            <p className="text-sm text-destructive">
+              Anda telah menggunakan seluruh 3 kali batas percobaan untuk modul
+              ini tanpa mencapai nilai kelulusan {nilaiLulus}.
+            </p>
+          </div>
+          <Card className="w-full max-w-xs bg-background">
+            <CardContent className="space-y-1 p-3 text-sm">
+              <span className="block font-medium text-foreground">
+                Riwayat Nilai:
+              </span>
+              {riwayatPercobaan.map((r) => (
+                <div
+                  key={r.nomor_percobaan}
+                  className="flex justify-between gap-3"
+                >
+                  <span className="text-muted-foreground">
+                    Percobaan ke-{r.nomor_percobaan}:
+                  </span>
+                  <span className="font-semibold text-destructive">
+                    {r.nilai} / 100
+                  </span>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Kartu Header Kuis & Sisa Percobaan */}
-      <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <HelpCircle className="w-5 h-5 text-brand-600" />
-            <h3 className="font-bold text-slate-900 text-base sm:text-lg">
-              Kuis Evaluasi Modul
-            </h3>
+      <Card>
+        <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <HelpCircle className="h-5 w-5 text-primary" />
+              <h3 className="text-base font-semibold sm:text-lg">
+                Kuis Evaluasi Modul
+              </h3>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Semua soal pilihan ganda dinilai langsung di server. Kunci
+              jawaban tidak pernah dibocorkan.
+            </p>
           </div>
-          <p className="text-xs text-slate-500">
-            Semua soal pilihan ganda dinilai langsung di server. Kunci jawaban tidak pernah dibocorkan.
-          </p>
-        </div>
 
-        <div className="flex items-center gap-2 text-xs">
-          <span className="px-3 py-1.5 rounded-xl font-bold bg-slate-100 text-slate-700 border border-slate-200">
-            Syarat Lulus: {nilaiLulus} / 100
-          </span>
-          <span
-            className={`px-3 py-1.5 rounded-xl font-bold border ${
-              sisaPercobaan === 1
-                ? "bg-amber-100 text-amber-900 border-amber-300 animate-pulse"
-                : "bg-brand-50 text-brand-700 border-brand-200"
-            }`}
-          >
-            Sisa {sisaPercobaan} Percobaan
-          </span>
-        </div>
-      </div>
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <Badge variant="outline">Syarat Lulus: {nilaiLulus} / 100</Badge>
+            <Badge variant={sisaPercobaan === 1 ? "highlight" : "secondary"}>
+              Sisa {sisaPercobaan} Percobaan
+            </Badge>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Tampilan Hasil Evaluasi Kuis Terakhir */}
-      {hasilTerakhir && (
-        <div
-          className={`p-6 rounded-2xl border text-center space-y-3 ${
+      {hasilTerakhir && !modalHasilOpen && (
+        <Card
+          className={
             hasilTerakhir.lulus
-              ? "bg-emerald-50 border-emerald-300 text-emerald-900"
-              : "bg-amber-50 border-amber-300 text-amber-900"
-          }`}
+              ? "border-emerald-200 bg-emerald-50"
+              : "border-highlight bg-highlight/40"
+          }
         >
-          <div className="flex items-center justify-center gap-2 text-lg font-extrabold">
-            {hasilTerakhir.lulus ? (
-              <>
-                <CheckCircle2 className="w-6 h-6 text-emerald-600" />
-                <span>Selamat! Anda LULUS Kuis Ini</span>
-              </>
-            ) : (
-              <>
-                <AlertCircle className="w-6 h-6 text-amber-600" />
-                <span>Belum Mencapai Nilai Kelulusan</span>
-              </>
-            )}
-          </div>
-
-          <div className="flex justify-center gap-6 text-sm">
-            <div>
-              <span className="text-xs block opacity-80">Nilai Anda:</span>
-              <span className="text-2xl font-black">{hasilTerakhir.nilai}</span>
-            </div>
-            <div>
-              <span className="text-xs block opacity-80">Jawaban Benar:</span>
-              <span className="text-2xl font-black">
-                {hasilTerakhir.jumlah_benar} / {hasilTerakhir.jumlah_soal}
-              </span>
-            </div>
-          </div>
-
-          {hasilTerakhir.kursus_selesai && (
-            <div className="p-4 rounded-xl bg-white shadow-md border border-emerald-200 mt-3 space-y-2">
-              <Sparkles className="w-6 h-6 text-accent-500 mx-auto" />
-              <p className="font-bold text-slate-900 text-sm">
-                Seluruh modul kursus telah Anda selesaikan!
-              </p>
-              <Link
-                href={`/kursus-saya/${pendaftaranId}/sertifikat`}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-600 text-white font-bold text-xs shadow-md shadow-brand-500/20 hover:bg-brand-700 transition"
+          <CardContent className="space-y-3 p-5 text-center">
+            <Badge
+              variant={hasilTerakhir.lulus ? "secondary" : "highlight"}
+              className={
+                hasilTerakhir.lulus
+                  ? "border-emerald-200 bg-emerald-100 text-emerald-800"
+                  : undefined
+              }
+            >
+              {hasilTerakhir.lulus ? (
+                <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
+              ) : (
+                <AlertCircle className="mr-1 h-3.5 w-3.5" />
+              )}
+              {hasilTerakhir.lulus ? "Lulus" : "Belum Lulus"}
+            </Badge>
+            <p className="text-sm text-muted-foreground">
+              Nilai terakhir:{" "}
+              <span className="font-semibold text-foreground">
+                {hasilTerakhir.nilai} / 100
+              </span>{" "}
+              · Jawaban benar {hasilTerakhir.jumlah_benar} /{" "}
+              {hasilTerakhir.jumlah_soal}
+            </p>
+            {hasilTerakhir.kursus_selesai && (
+              <Button
+                asChild
+                className="bg-emerald-600 text-white hover:bg-emerald-700"
               >
-                <Award className="w-4 h-4" /> Buka & Cetak Sertifikat Resmi
-              </Link>
-            </div>
-          )}
-        </div>
-      )}
-
-      {errorMsg && (
-        <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
-          <span>{errorMsg}</span>
-        </div>
+                <Link href={`/kursus-saya/${pendaftaranId}/sertifikat`}>
+                  <Award />
+                  Buka &amp; Cetak Sertifikat Resmi
+                </Link>
+              </Button>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {/* Formulir Lembar Soal Kuis */}
       {loadingSoal ? (
-        <div className="p-12 text-center text-slate-400 text-sm space-y-2">
-          <RefreshCw className="w-6 h-6 animate-spin mx-auto text-brand-600" />
-          <p>Memuat butir soal kuis...</p>
-        </div>
+        <KuisSkeleton />
       ) : soalList.length === 0 ? (
-        <div className="p-8 text-center bg-white rounded-2xl border border-slate-200 text-slate-500 text-sm">
-          Soal kuis untuk modul ini belum dikonfigurasi oleh instruktur.
-        </div>
+        <Card>
+          <CardContent className="p-8 text-center text-sm text-muted-foreground">
+            Soal kuis untuk modul ini belum dikonfigurasi oleh instruktur.
+          </CardContent>
+        </Card>
       ) : (
-        <form onSubmit={handleKirimKuis} className="space-y-6">
+        <form onSubmit={handleKirimKuis} className="space-y-5">
           {soalList.map((soal) => {
             const jawabanAktif = jawaban[soal.id];
             const opsiList = [
@@ -425,50 +506,51 @@ export default function FormKuis({
               { label: "D", text: soal.pilihan_d },
             ];
 
-            const isUnanswered = !jawabanAktif && errorMsg;
+            const isUnanswered = !jawabanAktif && Boolean(errorMsg);
 
             return (
-              <div
+              <Card
                 key={soal.id}
                 id={`soal-card-${soal.id}`}
-                className={`bg-white rounded-2xl p-6 border shadow-sm space-y-4 transition-all duration-300 ${
+                className={
                   isUnanswered
-                    ? "border-rose-400 bg-rose-50/20 ring-2 ring-rose-200"
-                    : "border-slate-200/80"
-                }`}
+                    ? "border-destructive/50 ring-2 ring-destructive/20"
+                    : undefined
+                }
               >
-                <div className="flex items-start gap-3">
-                  <span
-                    className={`w-7 h-7 rounded-lg font-extrabold text-xs flex items-center justify-center flex-shrink-0 mt-0.5 transition ${
-                      isUnanswered
-                        ? "bg-rose-100 text-rose-800"
-                        : "bg-brand-50 text-brand-700"
-                    }`}
-                  >
-                    {soal.urutan}
-                  </span>
-                  <div className="flex-1">
-                    <p className="font-semibold text-slate-800 text-sm sm:text-base leading-relaxed">
-                      {soal.pertanyaan}
-                    </p>
-                    {isUnanswered && (
-                      <span className="text-xs text-rose-600 font-bold mt-1 inline-block">
-                        * Butir soal ini belum dijawab
-                      </span>
-                    )}
+                <CardHeader className="p-5 pb-3">
+                  <div className="flex items-start gap-3">
+                    <span
+                      className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-xs font-semibold ${
+                        isUnanswered
+                          ? "bg-destructive/10 text-destructive"
+                          : "bg-secondary text-secondary-foreground"
+                      }`}
+                    >
+                      {soal.urutan}
+                    </span>
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <CardTitle className="text-sm font-medium leading-relaxed sm:text-base">
+                        {soal.pertanyaan}
+                      </CardTitle>
+                      {isUnanswered && (
+                        <p className="text-xs font-medium text-destructive">
+                          * Butir soal ini belum dijawab
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
-
-                <div className="space-y-2 pl-10">
+                </CardHeader>
+                <CardContent className="space-y-2 p-5 pt-0">
                   {opsiList.map((opsi) => {
                     const isSelected = jawabanAktif === opsi.label;
                     return (
                       <label
                         key={opsi.label}
-                        className={`flex items-center gap-3 p-3.5 rounded-xl border text-xs sm:text-sm font-medium cursor-pointer transition select-none ${
+                        className={`flex cursor-pointer select-none items-center gap-3 rounded-md border p-3 text-sm transition-colors focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 ${
                           isSelected
-                            ? "bg-brand-50/90 border-brand-500 text-brand-900 shadow-xs ring-1 ring-brand-500"
-                            : "bg-white border-slate-200/80 hover:bg-slate-50 text-slate-700"
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:bg-accent"
                         }`}
                       >
                         <input
@@ -476,187 +558,227 @@ export default function FormKuis({
                           name={`soal-${soal.id}`}
                           value={opsi.label}
                           checked={isSelected}
-                          onChange={() => handlePilihJawaban(soal.id, opsi.label)}
+                          onChange={() =>
+                            handlePilihJawaban(soal.id, opsi.label)
+                          }
                           className="sr-only"
                         />
                         <span
-                          className={`w-6 h-6 rounded-md font-bold text-xs flex items-center justify-center flex-shrink-0 transition ${
+                          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs font-semibold ${
                             isSelected
-                              ? "bg-brand-600 text-white"
-                              : "bg-slate-100 text-slate-600"
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-muted text-muted-foreground"
                           }`}
                         >
                           {opsi.label}
                         </span>
-                        <span className="flex-1 leading-relaxed">
+                        <span className="min-w-0 flex-1 leading-relaxed">
                           {opsi.text}
                         </span>
                       </label>
                     );
                   })}
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             );
           })}
 
-          <div className="pt-2 space-y-3">
-            {/* Notifikasi Validasi & Error Tepat di Atas Tombol Submit */}
+          <div className="space-y-3">
             {errorMsg && (
-              <div className="p-4 rounded-xl bg-rose-50 border border-rose-300 text-rose-900 text-xs sm:text-sm flex items-start gap-3 shadow-xs animate-in fade-in duration-200">
-                <AlertCircle className="w-5 h-5 text-rose-600 flex-shrink-0 mt-0.5" />
-                <div className="flex-1 font-semibold leading-relaxed">
-                  {errorMsg}
-                </div>
-              </div>
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{errorMsg}</AlertDescription>
+              </Alert>
             )}
 
-            <button
+            <Button
+              ref={submitButtonRef}
               type="submit"
               disabled={submitting}
-              className="w-full py-4 px-6 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-extrabold text-sm sm:text-base shadow-lg shadow-brand-500/25 disabled:opacity-50 transition flex items-center justify-center gap-2 group cursor-pointer"
+              size="lg"
+              className="w-full"
             >
               {submitting ? (
                 <>
-                  <RefreshCw className="w-5 h-5 animate-spin" />
-                  <span>Mengevaluasi Jawaban di Server...</span>
+                  <Loader2 className="animate-spin" />
+                  Mengevaluasi Jawaban di Server...
                 </>
               ) : (
                 <>
-                  <Send className="w-5 h-5 group-hover:translate-x-1 transition" />
-                  <span>Kirim Jawaban Kuis Sekarang</span>
+                  <Send />
+                  Kirim Jawaban Kuis Sekarang
                 </>
               )}
-            </button>
-            <p className="text-center text-[11px] text-slate-400">
-              Sistem akan mengunci percobaan secara atomik. Pastikan seluruh jawaban telah Anda periksa.
+            </Button>
+            <p className="text-center text-xs text-muted-foreground">
+              Sistem akan mengunci percobaan secara atomik. Pastikan seluruh
+              jawaban telah Anda periksa.
             </p>
           </div>
         </form>
       )}
 
-      {/* Modal Evaluasi Kuis Pop-up (BR-09, BR-10, BR-11) */}
-      {modalHasilOpen && hasilTerakhir && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-150"
-          role="dialog"
-          aria-modal="true"
-        >
-          <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col p-6 text-center space-y-5">
-            {/* Icon & Title */}
-            <div className="space-y-2">
-              <div
-                className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto shadow-md ${
-                  hasilTerakhir.lulus
-                    ? "bg-emerald-100 text-emerald-700 shadow-emerald-500/20"
-                    : "bg-amber-100 text-amber-700 shadow-amber-500/20"
-                }`}
-              >
-                {hasilTerakhir.lulus ? (
-                  <CheckCircle2 className="w-8 h-8" />
-                ) : (
-                  <AlertCircle className="w-8 h-8" />
-                )}
-              </div>
-              <h3 className="text-xl font-extrabold text-slate-900">
-                {hasilTerakhir.lulus
-                  ? "Selamat! Anda Lulus Kuis Ini"
-                  : "Belum Mencapai Nilai Kelulusan"}
-              </h3>
-              <p className="text-xs text-slate-500">
-                {hasilTerakhir.lulus
-                  ? "Jawaban Anda telah dievaluasi dan memenuhi batas syarat kelulusan."
-                  : `Syarat minimal nilai kelulusan modul ini adalah ${nilaiLulus}.`}
-              </p>
-            </div>
-
-            {/* Nilai Box */}
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 grid grid-cols-2 gap-4">
-              <div className="text-center border-r border-slate-200">
-                <span className="text-xs text-slate-500 block">Nilai Anda:</span>
+      {/* Dialog Hasil Evaluasi Kuis (BR-09, BR-10, BR-11) */}
+      <Dialog
+        open={modalHasilOpen}
+        onOpenChange={(open) => {
+          if (!open) setModalHasilOpen(false);
+        }}
+      >
+        {hasilTerakhir && (
+          <DialogContent className="flex max-h-[90vh] w-[calc(100vw-2rem)] max-w-md flex-col gap-0 overflow-hidden p-0">
+            <DialogHeader className="shrink-0 border-b px-6 py-4 pr-14">
+              <div className="flex min-w-0 items-center gap-3">
                 <span
-                  className={`text-3xl font-black ${
-                    hasilTerakhir.lulus ? "text-emerald-600" : "text-amber-600"
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md ${
+                    hasilTerakhir.lulus
+                      ? "bg-emerald-100 text-emerald-700"
+                      : "bg-highlight text-highlight-foreground"
                   }`}
                 >
-                  {hasilTerakhir.nilai}
+                  {hasilTerakhir.lulus ? (
+                    <CheckCircle2 className="h-5 w-5" />
+                  ) : (
+                    <AlertCircle className="h-5 w-5" />
+                  )}
                 </span>
-                <span className="text-[10px] text-slate-400 block">dari 100</span>
+                <div className="min-w-0 space-y-1">
+                  <DialogTitle>Hasil Evaluasi</DialogTitle>
+                  <DialogDescription>
+                    Ringkasan nilai dan tindak lanjut kuis modul ini.
+                  </DialogDescription>
+                </div>
               </div>
-              <div className="text-center">
-                <span className="text-xs text-slate-500 block">Jawaban Benar:</span>
-                <span className="text-3xl font-black text-slate-800">
-                  {hasilTerakhir.jumlah_benar}
-                </span>
-                <span className="text-[10px] text-slate-400 block">
-                  dari {hasilTerakhir.jumlah_soal} butir soal
-                </span>
+            </DialogHeader>
+
+            <div className="min-h-0 min-w-0 flex-1 space-y-4 overflow-y-auto overflow-x-hidden px-6 py-5">
+              <div className="space-y-2 text-center">
+                <Badge
+                  variant={hasilTerakhir.lulus ? "secondary" : "destructive"}
+                  className={
+                    hasilTerakhir.lulus
+                      ? "border-emerald-200 bg-emerald-100 text-emerald-800"
+                      : undefined
+                  }
+                >
+                  {hasilTerakhir.lulus ? "Lulus" : "Belum Lulus"}
+                </Badge>
+                <p className="text-sm text-muted-foreground">
+                  {hasilTerakhir.lulus
+                    ? "Jawaban Anda telah dievaluasi dan memenuhi batas syarat kelulusan."
+                    : `Syarat minimal nilai kelulusan modul ini adalah ${nilaiLulus}.`}
+                </p>
               </div>
+
+              <div className="grid grid-cols-2 gap-4 rounded-md border bg-muted/30 p-4 text-center">
+                <div className="border-r">
+                  <span className="block text-xs text-muted-foreground">
+                    Nilai Anda:
+                  </span>
+                  <span
+                    className={`text-3xl font-semibold ${
+                      hasilTerakhir.lulus
+                        ? "text-emerald-600"
+                        : "text-highlight-foreground"
+                    }`}
+                  >
+                    {hasilTerakhir.nilai}
+                  </span>
+                  <span className="block text-[10px] text-muted-foreground">
+                    dari 100
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-xs text-muted-foreground">
+                    Jawaban Benar:
+                  </span>
+                  <span className="text-3xl font-semibold text-foreground">
+                    {hasilTerakhir.jumlah_benar}
+                  </span>
+                  <span className="block text-[10px] text-muted-foreground">
+                    dari {hasilTerakhir.jumlah_soal} butir soal
+                  </span>
+                </div>
+              </div>
+
+              {hasilTerakhir.kursus_selesai ? (
+                <Alert className="border-emerald-200 bg-emerald-50 text-emerald-800">
+                  <Sparkles className="h-4 w-4" />
+                  <AlertDescription>
+                    Seluruh modul telah selesai. Sertifikat kelulusan digital
+                    Anda telah resmi diterbitkan oleh sistem Pijar Aksara.
+                  </AlertDescription>
+                </Alert>
+              ) : !hasilTerakhir.lulus ? (
+                <Alert className="border-highlight bg-highlight/40 text-highlight-foreground">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Sisa kesempatan kuis:{" "}
+                    <strong>{hasilTerakhir.sisa_percobaan} kali lagi</strong>{" "}
+                    (Maksimal 3x percobaan).
+                  </AlertDescription>
+                </Alert>
+              ) : null}
             </div>
 
-            {/* Status Percobaan atau Kelulusan Kursus */}
-            {hasilTerakhir.kursus_selesai ? (
-              <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs space-y-1">
-                <Sparkles className="w-5 h-5 text-emerald-600 mx-auto" />
-                <p className="font-extrabold text-sm">
-                  Selamat! Seluruh Modul Telah Selesai
-                </p>
-                <p className="text-emerald-800 text-[11px]">
-                  Sertifikat kelulusan digital Anda telah resmi diterbitkan oleh sistem Pijar Aksara.
-                </p>
-              </div>
-            ) : !hasilTerakhir.lulus ? (
-              <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 font-medium">
-                Sisa kesempatan kuis:{" "}
-                <strong>{hasilTerakhir.sisa_percobaan} kali lagi</strong> (Maksimal 3x percobaan).
-              </div>
-            ) : null}
-
-            {/* Action Buttons */}
-            <div className="pt-2 space-y-2">
+            <DialogFooter className="shrink-0 flex-col gap-2 border-t bg-muted/30 px-6 py-4 sm:flex-row sm:justify-end sm:space-x-0">
               {hasilTerakhir.kursus_selesai ? (
-                <Link
-                  href={`/kursus-saya/${pendaftaranId}/sertifikat`}
-                  className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition flex items-center justify-center gap-2"
+                <Button
+                  asChild
+                  className="w-full bg-emerald-600 text-white hover:bg-emerald-700 sm:w-auto"
                 >
-                  <Award className="w-4 h-4" /> Buka &amp; Cetak Sertifikat Resmi
-                </Link>
+                  <Link href={`/kursus-saya/${pendaftaranId}/sertifikat`}>
+                    <Award />
+                    Buka &amp; Cetak Sertifikat
+                  </Link>
+                </Button>
               ) : hasilTerakhir.lulus ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setModalHasilOpen(false);
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                  }}
-                  className="w-full py-3 px-4 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-md shadow-brand-600/20 transition flex items-center justify-center gap-2"
-                >
-                  Lanjutkan Belajar <ArrowRight className="w-4 h-4" />
-                </button>
+                nextUrutan ? (
+                  <Button asChild className="w-full sm:w-auto">
+                    <Link
+                      href={`/kursus-saya/${pendaftaranId}/modul/${nextUrutan}`}
+                    >
+                      Lanjut ke Modul {nextUrutan}
+                      <ArrowRight />
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    className="w-full sm:w-auto"
+                    onClick={() => setModalHasilOpen(false)}
+                  >
+                    Tutup
+                  </Button>
+                )
               ) : hasilTerakhir.sisa_percobaan > 0 ? (
-                <button
+                <Button
                   type="button"
+                  className="w-full sm:w-auto"
                   onClick={() => {
                     setModalHasilOpen(false);
                     setJawaban({});
                     setErrorMsg(null);
                     window.scrollTo({ top: 0, behavior: "smooth" });
                   }}
-                  className="w-full py-3 px-4 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-md shadow-amber-600/20 transition flex items-center justify-center gap-2"
                 >
-                  <RotateCcw className="w-4 h-4" /> Ulangi Kuis Sekarang
-                </button>
+                  <RotateCcw />
+                  Ulangi Kuis Sekarang
+                </Button>
               ) : (
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  className="w-full sm:w-auto"
                   onClick={() => setModalHasilOpen(false)}
-                  className="w-full py-3 px-4 rounded-xl bg-slate-700 hover:bg-slate-800 text-white font-bold text-xs transition"
                 >
                   Tutup
-                </button>
+                </Button>
               )}
-            </div>
-          </div>
-        </div>
-      )}
+            </DialogFooter>
+          </DialogContent>
+        )}
+      </Dialog>
     </div>
   );
 }

@@ -40,18 +40,28 @@ export default function PageHeader({
               const isLast = index === breadcrumbs.length - 1;
               return (
                 <Fragment key={`${item.label}-${index}`}>
-                  <BreadcrumbItem className={cn(isLast && "min-w-0")}>
+                  <BreadcrumbItem
+                    className={cn(
+                      "min-w-0",
+                      isLast && "max-w-[60%] shrink-0",
+                      !isLast &&
+                        (index === 0 || item.label.length <= 12) &&
+                        "shrink-0"
+                    )}
+                  >
                     {isLast ? (
                       <BreadcrumbPage className="truncate">
                         {item.label}
                       </BreadcrumbPage>
                     ) : (
-                      <BreadcrumbLink asChild>
+                      <BreadcrumbLink asChild className="block truncate">
                         <Link href={item.href ?? "/"}>{item.label}</Link>
                       </BreadcrumbLink>
                     )}
                   </BreadcrumbItem>
-                  {!isLast && <BreadcrumbSeparator />}
+                  {!isLast && (
+                    <BreadcrumbSeparator className="shrink-0" />
+                  )}
                 </Fragment>
               );
             })}
