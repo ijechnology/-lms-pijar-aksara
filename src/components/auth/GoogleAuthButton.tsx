@@ -1,6 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
+import { Loader2 } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 
 interface GoogleAuthButtonProps {
@@ -30,9 +33,7 @@ export default function GoogleAuthButton({
         },
       });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
     } catch (err: unknown) {
       const msg =
         err instanceof Error
@@ -44,16 +45,17 @@ export default function GoogleAuthButton({
   };
 
   return (
-    <button
+    <Button
       type="button"
+      variant="outline"
+      className="w-full"
       onClick={handleGoogleAuth}
       disabled={loading}
-      className="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-sm font-semibold shadow-sm transition disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-1"
     >
       {loading ? (
-        <div className="w-5 h-5 border-2 border-slate-300 border-t-brand-600 rounded-full animate-spin" />
+        <Loader2 className="h-4 w-4 animate-spin" />
       ) : (
-        <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24">
+        <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
           <path
             fill="#4285F4"
             d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -73,6 +75,6 @@ export default function GoogleAuthButton({
         </svg>
       )}
       <span>{label}</span>
-    </button>
+    </Button>
   );
 }
