@@ -1,7 +1,9 @@
 "use client";
 
-import React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface PaginationProps {
   currentPage: number;
@@ -27,15 +29,18 @@ export default function Pagination({
   const startItem = (currentPage - 1) * itemsPerPage + 1;
   const endItem = Math.min(currentPage * itemsPerPage, totalItems);
 
-  // Generate page numbers with ellipses
   const getPageNumbers = () => {
-    const delta = 1; // Number of pages to show around current page
+    const delta = 1;
     const range: number[] = [];
     const rangeWithDots: (number | string)[] = [];
     let l: number | undefined;
 
     for (let i = 1; i <= totalPages; i++) {
-      if (i === 1 || i === totalPages || (i >= currentPage - delta && i <= currentPage + delta)) {
+      if (
+        i === 1 ||
+        i === totalPages ||
+        (i >= currentPage - delta && i <= currentPage + delta)
+      ) {
         range.push(i);
       }
     }
@@ -57,61 +62,61 @@ export default function Pagination({
 
   return (
     <div
-      className={`flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-white border-t border-slate-200 text-xs text-slate-600 rounded-b-2xl ${className}`}
+      className={cn(
+        "flex flex-col items-center justify-between gap-3 sm:flex-row",
+        className
+      )}
     >
-      <div className="text-slate-500 font-medium">
-        Menampilkan <span className="font-bold text-slate-800">{startItem}</span> -{" "}
-        <span className="font-bold text-slate-800">{endItem}</span> dari{" "}
-        <span className="font-bold text-slate-800">{totalItems}</span> data
-      </div>
+      <p className="text-sm text-muted-foreground">
+        Menampilkan <span className="font-medium text-foreground">{startItem}</span>
+        {" - "}
+        <span className="font-medium text-foreground">{endItem}</span> dari{" "}
+        <span className="font-medium text-foreground">{totalItems}</span> data
+      </p>
 
       <div className="flex items-center gap-1">
-        <button
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-8 w-8"
           onClick={() => onPageChange(currentPage - 1)}
-          disabled={currentPage <= 1}
-          className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed transition"
-          aria-label="Halaman Sebelumnya"
-          title="Halaman Sebelumnya"
+          disabled={currentPage === 1}
+          aria-label="Halaman sebelumnya"
         >
-          <ChevronLeft className="w-4 h-4" />
-        </button>
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
 
-        <div className="flex items-center gap-1">
-          {getPageNumbers().map((page, idx) => {
-            if (typeof page === "string") {
-              return (
-                <span key={`dots-${idx}`} className="px-2 py-1 text-slate-400 select-none">
-                  ...
-                </span>
-              );
-            }
+        {getPageNumbers().map((page, index) =>
+          page === "..." ? (
+            <span
+              key={`dots-${index}`}
+              className="px-2 text-sm text-muted-foreground"
+            >
+              ...
+            </span>
+          ) : (
+            <Button
+              key={page}
+              variant={currentPage === page ? "default" : "outline"}
+              size="sm"
+              className="h-8 min-w-8 px-2"
+              onClick={() => onPageChange(page as number)}
+            >
+              {page}
+            </Button>
+          )
+        )}
 
-            const isActive = page === currentPage;
-            return (
-              <button
-                key={page}
-                onClick={() => onPageChange(page)}
-                className={`min-w-[32px] h-8 px-2 rounded-lg font-bold text-xs transition ${
-                  isActive
-                    ? "bg-brand-600 text-white shadow-xs"
-                    : "border border-slate-200 hover:bg-slate-50 text-slate-700"
-                }`}
-              >
-                {page}
-              </button>
-            );
-          })}
-        </div>
-
-        <button
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-8 w-8"
           onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage >= totalPages}
-          className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed transition"
-          aria-label="Halaman Berikutnya"
-          title="Halaman Berikutnya"
+          disabled={currentPage === totalPages}
+          aria-label="Halaman berikutnya"
         >
-          <ChevronRight className="w-4 h-4" />
-        </button>
+          <ChevronRight className="h-4 w-4" />
+        </Button>
       </div>
     </div>
   );
