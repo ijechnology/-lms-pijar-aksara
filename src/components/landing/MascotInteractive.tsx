@@ -75,6 +75,9 @@ export default function MascotInteractive() {
     let blinkAt = -1e9;
     let raf = 0;
     let visible = true;
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
 
     const onMove = (e: PointerEvent) => {
       px = e.clientX;
@@ -95,7 +98,7 @@ export default function MascotInteractive() {
 
     const frame = (now: number) => {
       raf = requestAnimationFrame(frame);
-      if (!visible) return;
+      if (!visible || reduceMotion) return;
       const dt = Math.min(0.05, (now - prev) / 1000);
       prev = now;
 
@@ -187,8 +190,8 @@ export default function MascotInteractive() {
       className="relative w-full max-w-md mx-auto aspect-square flex items-center justify-center select-none"
     >
       {/* Pendaran Lingkaran Ambient Halus di Belakang Maskot */}
-      <div className="absolute inset-0 bg-gradient-to-tr from-brand-600/20 via-brand-500/10 to-accent-400/10 rounded-full blur-2xl pointer-events-none" />
-      <div className="absolute w-72 h-72 rounded-full border border-white/5 bg-slate-900/40 backdrop-blur-sm pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-tr from-primary/15 via-primary/5 to-highlight/30 rounded-full blur-2xl pointer-events-none" />
+      <div className="absolute h-72 w-72 rounded-full border border-border bg-background/70 pointer-events-none" />
 
       {/* Maskot Karakter Interaktif */}
       <button
@@ -196,11 +199,11 @@ export default function MascotInteractive() {
         type="button"
         onClick={poke}
         aria-label="Maskot Pembelajar Pijar Aksara"
-        className="relative z-10 w-full h-full p-0 m-0 border-0 bg-transparent cursor-pointer focus:outline-none transition-transform hover:scale-[1.02]"
+        className="relative z-10 h-full w-full cursor-pointer border-0 bg-transparent p-0 transition-transform hover:scale-[1.02] focus:outline-none motion-reduce:transition-none motion-reduce:hover:scale-100"
       >
         <svg
           viewBox={`0 0 ${CW} ${CH}`}
-          className="w-full h-full overflow-visible drop-shadow-[0_12px_24px_rgba(0,0,0,0.5)]"
+          className="h-full w-full overflow-visible drop-shadow-[0_12px_24px_rgba(15,23,42,0.15)]"
           aria-hidden="true"
         >
           <defs>

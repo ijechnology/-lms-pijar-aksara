@@ -1,11 +1,11 @@
-"use client";
-
-import React, { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 export default function FaqSection() {
-  const [openIndex, setOpenIndex] = useState<number | null>(0); // Buka yang pertama secara default
-
   const faqs = [
     {
       tanya: "Apakah sertifikat dari LMS Pijar Aksara resmi dan terverifikasi?",
@@ -29,57 +29,38 @@ export default function FaqSection() {
     },
   ];
 
-  const toggleFaq = (index: number) => {
-    setOpenIndex(openIndex === index ? null : index);
-  };
-
   return (
-    <section className="py-20 bg-slate-50 border-b border-slate-200">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
-        {/* Header Tanpa Badge Pill AI-Slop */}
-        <div className="text-center space-y-3">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
+    <section
+      id="faq"
+      className="scroll-mt-20 border-b bg-muted/30 py-16 sm:py-20"
+    >
+      <div className="mx-auto max-w-4xl space-y-8 px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-2xl space-y-2 text-center">
+          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
             Pertanyaan yang Sering Diajukan
           </h2>
-          <p className="text-base text-slate-600 leading-relaxed max-w-2xl mx-auto">
-            Temukan jawaban cepat seputar tata cara belajar, sertifikasi resmi, batas kuota, dan metode pembayaran di Pijar Aksara.
+          <p className="text-sm leading-relaxed text-muted-foreground sm:text-base">
+            Temukan jawaban cepat seputar tata cara belajar, sertifikasi resmi,
+            batas kuota, dan metode pembayaran di Pijar Aksara.
           </p>
         </div>
 
-        <div className="space-y-3.5">
-          {faqs.map((faq, idx) => {
-            const isOpen = openIndex === idx;
-            return (
-              <div
-                key={idx}
-                className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-sm transition-colors"
-              >
-                <button
-                  type="button"
-                  onClick={() => toggleFaq(idx)}
-                  className="w-full py-5 px-6 text-left flex items-center justify-between gap-4 font-bold text-slate-900 hover:text-brand-600 transition-colors focus:outline-none"
-                >
-                  <span className="text-base sm:text-lg">{faq.tanya}</span>
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-transform duration-200 ${
-                      isOpen
-                        ? "bg-brand-50 text-brand-600 rotate-180"
-                        : "bg-slate-100 text-slate-500"
-                    }`}
-                  >
-                    <ChevronDown className="w-4 h-4" />
-                  </div>
-                </button>
-
-                {isOpen && (
-                  <div className="px-6 pb-6 text-sm sm:text-base text-slate-600 leading-relaxed border-t border-slate-100 pt-4">
-                    {faq.jawab}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+        <Accordion type="single" collapsible defaultValue="faq-0" className="space-y-3">
+          {faqs.map((faq, index) => (
+            <AccordionItem
+              key={faq.tanya}
+              value={`faq-${index}`}
+              className="rounded-lg border bg-card px-4 sm:px-6"
+            >
+              <AccordionTrigger className="py-5 text-left text-base font-medium hover:no-underline sm:text-lg">
+                {faq.tanya}
+              </AccordionTrigger>
+              <AccordionContent className="pb-5 text-sm leading-relaxed text-muted-foreground sm:text-base">
+                {faq.jawab}
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
       </div>
     </section>
   );

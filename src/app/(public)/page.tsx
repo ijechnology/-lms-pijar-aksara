@@ -1,213 +1,111 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
-import { KursusItem } from "@/components/kursus/KursusCard";
-import { createClient } from "@/lib/supabase/client";
-import type { HargaFilter } from "@/types/kursus";
+import { Suspense, useMemo } from "react";
+import Link from "next/link";
 
-// Modular Landing Page Components
-import HeroSection from "@/components/landing/HeroSection";
-import ValueProposition from "@/components/landing/ValueProposition";
 import CourseCatalogSection from "@/components/landing/CourseCatalogSection";
+import FaqSection from "@/components/landing/FaqSection";
+import HeroSection from "@/components/landing/HeroSection";
 import MentorShowcase from "@/components/landing/MentorShowcase";
 import TestimonialSection from "@/components/landing/TestimonialSection";
-import FaqSection from "@/components/landing/FaqSection";
+import ValueProposition from "@/components/landing/ValueProposition";
+import Footer from "@/components/layout/Footer";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useKatalogFilters } from "@/hooks/useKatalogFilters";
+import { useKursusCatalog } from "@/hooks/useKursusCatalog";
+import { filterKursus } from "@/lib/kursus";
 
-// Data cadangan resmi jika koneksi database offline (4 Kursus Terbit)
-const INITIAL_COURSES: KursusItem[] = [
-  {
-    id: "00000000-0000-4000-b000-000000000001",
-    judul: "Excel untuk Administrasi Perkantoran",
-    slug: "excel-administrasi-perkantoran",
-    kategori: "Administrasi",
-    ringkasan: "Kuasai rumus penting, tabel data, dan laporan kerja harian dengan Microsoft Excel.",
-    harga: 150000,
-    kuota: 25,
-    kursi_terpakai: 18,
-    nilai_lulus: 70,
-    status: "terbit",
-    instruktur_nama: "Yudha Pratama",
-    total_modul: 3,
-  },
-  {
-    id: "00000000-0000-4000-b000-000000000002",
-    judul: "Dasar Pembukuan dan Laporan Keuangan UMKM",
-    slug: "dasar-pembukuan-umkm",
-    kategori: "Bisnis & Keuangan",
-    ringkasan: "Pencatatan arus kas, laba rugi sederhana, dan pemisahan uang usaha bagi pemilik toko dan UMKM.",
-    harga: 200000,
-    kuota: 12,
-    kursi_terpakai: 11,
-    nilai_lulus: 70,
-    status: "terbit",
-    instruktur_nama: "Yudha Pratama",
-    total_modul: 3,
-  },
-  {
-    id: "00000000-0000-4000-b000-000000000003",
-    judul: "Desain Konten Promosi dengan Canva",
-    slug: "desain-konten-canva",
-    kategori: "Desain Konten",
-    ringkasan: "Membuat poster promosi, materi media sosial, dan banner jualan menarik dalam hitungan menit.",
-    harga: 0,
-    kuota: 30,
-    kursi_terpakai: 12,
-    nilai_lulus: 70,
-    status: "terbit",
-    instruktur_nama: "Laras Wulandari",
-    total_modul: 2,
-  },
-  {
-    id: "00000000-0000-4000-b000-000000000005",
-    judul: "Bahasa Inggris Praktis untuk Komunikasi Kerja",
-    slug: "bahasa-inggris-komunikasi-kerja",
-    kategori: "Bahasa Asing",
-    ringkasan: "Percakapan profesional, etika email formal, dan istilah umum kantor untuk karier yang lebih luas.",
-    harga: 250000,
-    kuota: 20,
-    kursi_terpakai: 14,
-    nilai_lulus: 75,
-    status: "terbit",
-    instruktur_nama: "Michael Sitorus",
-    total_modul: 3,
-  },
-];
+function HomeContent() {
+  const { courses, categories, loading } = useKursusCatalog();
+  const filters = useKatalogFilters();
+  const { q, kategori, harga, setQ, setKategori, setHarga, reset } = filters;
 
-export default function HomePage() {
-  const [courses, setCourses] = useState<KursusItem[]>(INITIAL_COURSES);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("semua");
-  const [selectedPrice, setSelectedPrice] =
-    useState<HargaFilter>("semua");
-
-  useEffect(() => {
-    async function loadKursusFromSupabase() {
-      try {
-        const supabase = createClient();
-        // Ambil kursus berstatus 'terbit' (BR-01)
-        const { data: kursusData, error } = await supabase
-          .from("kursus")
-          .select(`
-            id, judul, slug, kategori, ringkasan, harga, kuota, nilai_lulus, status,
-            profiles:instruktur_id(nama_lengkap),
-            modul(id)
-          `)
-          .eq("status", "terbit")
-          .order("dibuat_pada", { ascending: false });
-
-        if (!error && kursusData && kursusData.length > 0) {
-          // Ambil kursi terpakai untuk setiap kursus
-          const coursesWithSeats: KursusItem[] = await Promise.all(
-            kursusData.map(async (k: any) => {
-              const { count } = await supabase
-                .from("pendaftaran")
-                .select("id", { count: "exact", head: true })
-                .eq("kursus_id", k.id)
-                .or("status.in.(aktif,selesai),and(status.eq.menunggu_bayar,batas_bayar.gt.now())");
-
-              return {
-                id: k.id,
-                judul: k.judul,
-                slug: k.slug,
-                kategori: k.kategori,
-                ringkasan: k.ringkasan,
-                harga: k.harga,
-                kuota: k.kuota,
-                kursi_terpakai: count ?? 0,
-                nilai_lulus: k.nilai_lulus,
-                status: k.status,
-                instruktur_nama: k.profiles?.nama_lengkap || "Instruktur Lembaga",
-                total_modul: k.modul?.length || 0,
-              };
-            })
-          );
-          setCourses(coursesWithSeats);
-        }
-      } catch (err) {
-        console.warn("Menggunakan data contoh kursus publik:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadKursusFromSupabase();
-  }, []);
-
-  const categories = useMemo(() => {
-    const set = new Set<string>();
-    courses.forEach((c) => set.add(c.kategori));
-    return Array.from(set);
-  }, [courses]);
-
-  const filteredCourses = useMemo(() => {
-    return courses.filter((c) => {
-      // Filter kata kunci pencarian
-      const matchQuery =
-        !searchQuery ||
-        c.judul.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.ringkasan.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.kategori.toLowerCase().includes(searchQuery.toLowerCase());
-
-      // Filter kategori
-      const matchCategory =
-        selectedCategory === "semua" || c.kategori === selectedCategory;
-
-      // Filter harga
-      const matchPrice =
-        selectedPrice === "semua" ||
-        (selectedPrice === "gratis" && c.harga === 0) ||
-        (selectedPrice === "berbayar" && c.harga > 0);
-
-      return matchQuery && matchCategory && matchPrice;
-    });
-  }, [courses, searchQuery, selectedCategory, selectedPrice]);
+  const filtered = useMemo(
+    () => filterKursus(courses, { q, kategori, harga }),
+    [courses, q, kategori, harga]
+  );
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
-
-      {/* 1. Hero Section Modern ala Ruangguru & Zenius */}
+    <>
       <HeroSection />
-
-      {/* 2. Value Proposition (Pilar Keunggulan Pijar Aksara) */}
       <ValueProposition />
-
-      {/* 3. Katalog Kursus Interaktif */}
       <CourseCatalogSection
-        courses={filteredCourses}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        selectedCategory={selectedCategory}
-        onCategoryChange={setSelectedCategory}
-        selectedPrice={selectedPrice}
-        onPriceChange={setSelectedPrice}
+        courses={filtered}
+        searchQuery={q}
+        onSearchChange={setQ}
+        selectedCategory={kategori}
+        onCategoryChange={setKategori}
+        selectedPrice={harga}
+        onPriceChange={setHarga}
         categories={categories}
+        loading={loading}
+        onReset={reset}
       />
-
-      {/* 4. Showcase Instruktur Praktisi */}
       <MentorShowcase />
-
-      {/* 5. Testimoni Peserta (Fokus UMKM & Peserta Mandiri) */}
       <TestimonialSection />
-
-      {/* 6. Tanya Jawab Umum (FAQ Interaktif) */}
       <FaqSection />
 
-      {/* Footer Resmi */}
-      <footer className="bg-white border-t border-slate-200 py-12 px-4 sm:px-6 lg:px-8 text-center text-slate-500 text-xs sm:text-sm space-y-2">
-        <div className="max-w-4xl mx-auto space-y-2">
-          <p className="font-bold text-slate-800 text-base">
-            Lembaga Kursus Pijar Aksara Kota Depok
-          </p>
-          <p className="text-slate-500">
-            Menyelenggarakan kursus singkat terpadu vokasi dan kecakapan kerja untuk pekerja kantor, pencari kerja, dan pelaku UMKM di Kota Depok, Jawa Barat.
-          </p>
-          <div className="pt-4 flex flex-wrap justify-center gap-6 text-xs text-slate-400">
-            <span>&copy; {new Date().getFullYear()} LMS Pijar Aksara. Hak cipta dilindungi undang-undang.</span>
-            <span>Depok, Jawa Barat</span>
+      <section className="border-t bg-muted/30 py-16">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col items-start justify-between gap-6 rounded-lg border bg-card p-8 sm:flex-row sm:items-center">
+            <div className="space-y-1">
+              <h2 className="text-2xl font-semibold tracking-tight">
+                Siap mulai belajar keterampilan baru?
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Pilih kursus singkat bersertifikat resmi sesuai kebutuhan kerja
+                atau usaha Anda.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button asChild>
+                <Link href="/kursus">Jelajahi Katalog</Link>
+              </Button>
+              <Button variant="outline" asChild>
+                <Link href="/daftar">Daftar Akun</Link>
+              </Button>
+            </div>
           </div>
         </div>
-      </footer>
-    </div>
+      </section>
+
+      <Footer />
+    </>
+  );
+}
+
+function LandingSkeleton() {
+  return (
+    <>
+      <div className="border-b bg-muted/30">
+        <div className="mx-auto grid max-w-7xl gap-8 px-4 py-16 sm:px-6 lg:grid-cols-12 lg:px-8 lg:py-24">
+          <div className="space-y-4 lg:col-span-7">
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-3/4" />
+            <Skeleton className="h-5 w-full" />
+            <Skeleton className="h-5 w-2/3" />
+            <Skeleton className="h-11 w-48" />
+          </div>
+          <Skeleton className="aspect-square w-full max-w-md justify-self-center lg:col-span-5" />
+        </div>
+      </div>
+      <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+        <div className="grid gap-6 md:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <Skeleton key={index} className="h-72 w-full" />
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={<LandingSkeleton />}>
+      <HomeContent />
+    </Suspense>
   );
 }

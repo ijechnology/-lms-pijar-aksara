@@ -69,7 +69,7 @@ export default function CourseCatalogSection({
   return (
     <section
       id="katalog"
-      className="mx-auto w-full max-w-7xl space-y-8 px-4 py-12 sm:px-6 sm:py-16 lg:px-8"
+      className="mx-auto w-full max-w-7xl scroll-mt-20 space-y-8 px-4 py-12 sm:px-6 sm:py-16 lg:px-8"
     >
       <div className="flex flex-col gap-3 border-b pb-6 md:flex-row md:items-end md:justify-between">
         <div className="space-y-1">

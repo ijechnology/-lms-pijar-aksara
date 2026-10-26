@@ -1,5 +1,6 @@
-import React from "react";
 import { Briefcase, UserCheck, Award, Clock } from "lucide-react";
+
+import { Card, CardContent } from "@/components/ui/card";
 
 export default function ValueProposition() {
   const benefits = [
@@ -8,67 +9,57 @@ export default function ValueProposition() {
       title: "Kurikulum Praktis & Aplikatif",
       description:
         "Fokus pada studi kasus harian dunia kerja perkantoran dan toko UMKM. Materi terstruktur langsung siap pakai tanpa teori berbelit.",
-      iconBg: "bg-blue-50 text-brand-600 border-blue-100",
     },
     {
       icon: UserCheck,
       title: "Instruktur Praktisi Berpengalaman",
       description:
         "Dibimbing langsung oleh praktisi aktif di bidang akuntansi keuangan, desainer konten kreatif, dan komunikasi bisnis profesional.",
-      iconBg: "bg-indigo-50 text-indigo-600 border-indigo-100",
     },
     {
       icon: Award,
       title: "Ujian Kuis & Sertifikat Resmi",
       description:
         "Evaluasi pemahaman berbasis standar kelulusan terukur serta penerbitan e-sertifikat resmi dari Lembaga Kursus Pijar Aksara Depok.",
-      iconBg: "bg-emerald-50 text-emerald-600 border-emerald-100",
     },
     {
       icon: Clock,
       title: "Kuota Terjadwal Anti-Bentrok",
       description:
         "Setiap kelas memiliki batasan kuota peserta teratur untuk menjaga proses belajar yang fokus dan pendampingan yang optimal.",
-      iconBg: "bg-amber-50 text-amber-600 border-amber-100",
     },
   ];
 
   return (
-    <section className="py-20 bg-white border-b border-slate-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
-        {/* Header Tanpa Badge Pill AI-Slop */}
-        <div className="text-center max-w-3xl mx-auto space-y-3">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
+    <section className="border-b bg-background py-16 sm:py-20">
+      <div className="mx-auto max-w-7xl space-y-10 px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-2xl space-y-2 text-center">
+          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
             Kenapa Memilih Belajar di Pijar Aksara?
           </h2>
-          <p className="text-base text-slate-600 leading-relaxed">
-            Metode pelatihan intensif terpadu yang dirancang untuk mempercepat penguasaan keterampilan siap kerja bagi staf dan pemilik usaha.
+          <p className="text-sm leading-relaxed text-muted-foreground sm:text-base">
+            Metode pelatihan intensif terpadu yang dirancang untuk mempercepat
+            penguasaan keterampilan siap kerja bagi staf dan pemilik usaha.
           </p>
         </div>
 
-        {/* 4 Pilar Keunggulan */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {benefits.map((item, idx) => {
-            const IconComponent = item.icon;
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {benefits.map((item) => {
+            const Icon = item.icon;
             return (
-              <div
-                key={idx}
-                className="bg-slate-50/70 rounded-2xl border border-slate-200/80 p-6 flex flex-col justify-between hover:bg-white hover:border-brand-400 hover:shadow-xl hover:shadow-brand-500/5 transition-all duration-300 group"
-              >
-                <div className="space-y-4">
-                  <div
-                    className={`w-12 h-12 rounded-xl flex items-center justify-center border ${item.iconBg} group-hover:scale-105 transition-transform`}
-                  >
-                    <IconComponent className="w-6 h-6" />
+              <Card key={item.title} className="h-full">
+                <CardContent className="space-y-4 p-6">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-md bg-secondary p-2 text-primary">
+                    <Icon className="h-5 w-5" />
                   </div>
-                  <h3 className="text-lg font-bold text-slate-900 group-hover:text-brand-600 transition-colors">
-                    {item.title}
-                  </h3>
-                  <p className="text-sm text-slate-600 leading-relaxed">
-                    {item.description}
-                  </p>
-                </div>
-              </div>
+                  <div className="space-y-1.5">
+                    <h3 className="font-semibold">{item.title}</h3>
+                    <p className="text-sm leading-relaxed text-muted-foreground">
+                      {item.description}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
             );
           })}
         </div>
