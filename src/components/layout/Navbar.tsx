@@ -47,7 +47,7 @@ export default function Navbar() {
   };
 
   const navLinks = [
-    { href: "/", label: "Katalog Kursus", icon: BookOpen, show: true },
+    { href: "/kursus", label: "Katalog Kursus", icon: BookOpen, show: true },
     {
       href: "/kursus-saya",
       label: "Kursus Saya",
