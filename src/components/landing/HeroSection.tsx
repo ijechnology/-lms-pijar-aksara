@@ -89,7 +89,7 @@ export default function HeroSection() {
                 Jelajahi Katalog Kursus
               </a>
               <Link
-                href="/register"
+                href="/daftar"
                 className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl font-bold text-sm bg-white/10 hover:bg-white/15 text-white border border-white/20 backdrop-blur-md transition-all duration-200"
               >
                 Daftar Akun Baru
