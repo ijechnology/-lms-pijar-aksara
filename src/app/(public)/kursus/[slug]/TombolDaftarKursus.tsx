@@ -1,19 +1,32 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  AlertCircle,
+  ArrowRight,
+  Building,
+  CheckCircle2,
+  CreditCard,
+  Loader2,
+  ShieldCheck,
+} from "lucide-react";
+import { toast } from "sonner";
+
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useAuth } from "@/context/AuthContext";
 import { createClient } from "@/lib/supabase/client";
-import AlertModal from "@/components/ui/AlertModal";
-import {
-  CreditCard,
-  CheckCircle2,
-  AlertCircle,
-  Sparkles,
-  ArrowRight,
-  ShieldCheck,
-  Building,
-} from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface TombolDaftarKursusProps {
   kursusId: string;
@@ -31,6 +44,7 @@ export default function TombolDaftarKursus({
   const router = useRouter();
   const { user, role, isLoading } = useAuth();
   const supabase = createClient();
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const [checkingExisting, setCheckingExisting] = useState(false);
   const [existingPendaftaran, setExistingPendaftaran] = useState<any | null>(null);
@@ -41,17 +55,6 @@ export default function TombolDaftarKursus({
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successData, setSuccessData] = useState<any | null>(null);
-  const [alertModal, setAlertModal] = useState<{
-    isOpen: boolean;
-    title: string;
-    message: string;
-    type: "info" | "error" | "success";
-  }>({
-    isOpen: false,
-    title: "",
-    message: "",
-    type: "info",
-  });
 
   // Periksa apakah peserta sudah terdaftar di kursus ini
   useEffect(() => {
@@ -99,14 +102,10 @@ export default function TombolDaftarKursus({
       return;
     }
     if (role !== "peserta") {
-      setAlertModal({
-        isOpen: true,
-        title: "Peran Tidak Sesuai",
-        message: "Hanya akun dengan peran Peserta yang dapat mendaftar kursus.",
-        type: "info",
-      });
+      toast.error("Hanya akun dengan peran Peserta yang dapat mendaftar kursus.");
       return;
     }
+    setErrorMsg(null);
     setIsModalOpen(true);
   };
 
@@ -135,7 +134,12 @@ export default function TombolDaftarKursus({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ pendaftaran_id: data.pendaftaran_id }),
-        }).catch((nErr) => console.warn("Gagal mengirim email notifikasi pendaftaran aktif:", nErr));
+        }).catch((nErr) =>
+          console.warn(
+            "Gagal mengirim email notifikasi pendaftaran aktif:",
+            nErr
+          )
+        );
       }
 
       // Jika metode bayar Mayar, kita buat invoice tagihan
@@ -147,22 +151,35 @@ export default function TombolDaftarKursus({
             body: JSON.stringify({ pendaftaran_id: data.pendaftaran_id }),
           });
           const mayarResult = await res.json();
-          const paymentLink = mayarResult?.paymentUrl || mayarResult?.payment_url;
+          const paymentLink =
+            mayarResult?.paymentUrl || mayarResult?.payment_url;
           if (paymentLink) {
             window.location.href = paymentLink;
             return;
           }
         } catch (mErr) {
-          console.warn("Gagal inisialisasi Mayar, tetap lanjutkan pendaftaran:", mErr);
+          console.warn(
+            "Gagal inisialisasi Mayar, tetap lanjutkan pendaftaran:",
+            mErr
+          );
         }
       }
 
       const targetTab = data?.status === "aktif" ? "aktif" : "menunggu_bayar";
       setTimeout(() => {
-        router.push(`/kursus-saya?tab=${targetTab}${data?.pendaftaran_id ? `&pendaftaran_id=${data.pendaftaran_id}` : ""}`);
+        router.push(
+          `/kursus-saya?tab=${targetTab}${
+            data?.pendaftaran_id
+              ? `&pendaftaran_id=${data.pendaftaran_id}`
+              : ""
+          }`
+        );
       }, 1200);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Terjadi kesalahan saat pendaftaran.";
+      const msg =
+        err instanceof Error
+          ? err.message
+          : "Terjadi kesalahan saat pendaftaran.";
       setErrorMsg(msg);
       setSubmitting(false);
     }
@@ -170,199 +187,218 @@ export default function TombolDaftarKursus({
 
   if (isPenuh) {
     return (
-      <button
-        disabled
-        className="w-full py-3.5 px-4 rounded-xl font-bold text-sm bg-slate-200 text-slate-500 cursor-not-allowed text-center"
-      >
+      <Button disabled className="w-full">
         Kuota Kursus Penuh
-      </button>
+      </Button>
     );
   }
 
   if (user && role !== "peserta") {
     return (
-      <div className="p-4 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-700 space-y-1">
-        <div className="font-bold flex items-center gap-1.5 text-slate-800">
-          <ShieldCheck className="w-4 h-4 text-brand-600" />
-          <span>Akun {role === "admin" ? "Admin" : "Instruktur"}</span>
-        </div>
-        <p className="text-[11px] text-slate-500 leading-relaxed">
-          Hanya akun dengan peran <strong>Peserta</strong> yang dapat mendaftar kursus.
-        </p>
-      </div>
+      <Alert>
+        <ShieldCheck className="h-4 w-4" />
+        <AlertTitle>
+          Akun {role === "admin" ? "Admin" : "Instruktur"}
+        </AlertTitle>
+        <AlertDescription>
+          Hanya akun dengan peran <strong>Peserta</strong> yang dapat mendaftar
+          kursus.
+        </AlertDescription>
+      </Alert>
     );
   }
 
   if (existingPendaftaran) {
     return (
-      <div className="space-y-2">
-        <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-          <span>Anda sudah terdaftar di kursus ini ({existingPendaftaran.status})</span>
-        </div>
-        <button
-          onClick={() => router.push("/kursus-saya")}
-          className="w-full py-3.5 px-4 rounded-xl font-bold text-sm bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-500/25 transition flex items-center justify-center gap-2"
-        >
-          Buka Ruang Belajar Saya <ArrowRight className="w-4 h-4" />
-        </button>
-      </div>
+      <Card>
+        <CardContent className="space-y-3 p-4">
+          <Alert className="border-emerald-200 bg-emerald-50 text-emerald-800 [&>svg]:text-emerald-600">
+            <CheckCircle2 className="h-4 w-4" />
+            <AlertTitle className="text-sm">Sudah terdaftar</AlertTitle>
+            <AlertDescription>
+              Anda sudah terdaftar di kursus ini (
+              {existingPendaftaran.status}).
+            </AlertDescription>
+          </Alert>
+          <Button
+            type="button"
+            className="w-full"
+            onClick={() => router.push("/kursus-saya")}
+          >
+            Buka Ruang Belajar Saya
+            <ArrowRight className="h-4 w-4" />
+          </Button>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
     <>
-      <button
+      <Button
+        ref={triggerRef}
+        type="button"
+        className="w-full"
         onClick={handleDaftarClick}
-        disabled={checkingExisting}
-        className="w-full py-3.5 px-4 rounded-xl font-bold text-sm bg-brand-600 hover:bg-brand-700 text-white shadow-lg shadow-brand-500/25 transition flex items-center justify-center gap-2 group"
+        disabled={checkingExisting || isLoading}
       >
-        <Sparkles className="w-4 h-4 text-accent-300 group-hover:rotate-12 transition" />
-        {user ? "Daftar Kursus Sekarang" : "Masuk untuk Mendaftar"}
-      </button>
+        {checkingExisting ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Memeriksa pendaftaran...
+          </>
+        ) : (
+          <>
+            {user ? "Daftar Kursus Sekarang" : "Masuk untuk Mendaftar"}
+            <ArrowRight className="h-4 w-4" />
+          </>
+        )}
+      </Button>
 
-      {/* Modal Pilihan Metode Pembayaran & Konfirmasi */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 sm:p-8 space-y-6 shadow-2xl border border-slate-100">
-            <div>
-              <h3 className="text-xl font-bold text-slate-900">
-                Konfirmasi Pendaftaran Kursus
-              </h3>
-              <p className="text-xs text-slate-500 mt-1">
-                Lembaga Kursus Pijar Aksara Depok
-              </p>
-            </div>
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent
+          className="max-h-[85vh] max-w-[calc(100vw-2rem)] overflow-y-auto sm:max-w-md"
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            triggerRef.current?.focus();
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle>Konfirmasi Pendaftaran Kursus</DialogTitle>
+            <DialogDescription>
+              Lembaga Kursus Pijar Aksara Depok
+            </DialogDescription>
+          </DialogHeader>
 
-            {errorMsg && (
-              <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
-                <span>{errorMsg}</span>
-              </div>
-            )}
+          {errorMsg && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Pendaftaran gagal</AlertTitle>
+              <AlertDescription>{errorMsg}</AlertDescription>
+            </Alert>
+          )}
 
-            {successData && (
-              <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2.5">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-                <span>
-                  {successData.status === "aktif"
-                    ? "Pendaftaran berhasil aktif! Mengalihkan ke ruang belajar..."
-                    : "Pendaftaran tercatat. Mengalihkan ke tagihan Anda..."}
-                </span>
-              </div>
-            )}
-
-            {!successData && (
-              <>
-                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">Total Biaya:</span>
-                    <span className="font-bold text-slate-900">
-                      {harga === 0
-                        ? "Gratis (Rp 0)"
-                        : new Intl.NumberFormat("id-ID", {
-                            style: "currency",
-                            currency: "IDR",
-                            maximumFractionDigits: 0,
-                          }).format(harga)}
-                    </span>
-                  </div>
+          {successData ? (
+            <Alert className="border-emerald-200 bg-emerald-50 text-emerald-800 [&>svg]:text-emerald-600">
+              <CheckCircle2 className="h-5 w-5" />
+              <AlertTitle>Pendaftaran tercatat</AlertTitle>
+              <AlertDescription>
+                {successData.status === "aktif"
+                  ? "Pendaftaran berhasil aktif! Mengalihkan ke ruang belajar..."
+                  : "Pendaftaran tercatat. Mengalihkan ke tagihan Anda..."}
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <>
+              <div className="rounded-lg border bg-muted/50 p-4 text-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-muted-foreground">Total Biaya</span>
+                  <span className="font-semibold">
+                    {harga === 0
+                      ? "Gratis (Rp 0)"
+                      : new Intl.NumberFormat("id-ID", {
+                          style: "currency",
+                          currency: "IDR",
+                          maximumFractionDigits: 0,
+                        }).format(harga)}
+                  </span>
                 </div>
+              </div>
 
-                {harga > 0 && (
-                  <div className="space-y-3">
-                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                      Pilih Metode Pembayaran
-                    </label>
+              {harga > 0 && (
+                <div className="space-y-3">
+                  <p className="text-sm font-medium">
+                    Pilih Metode Pembayaran
+                  </p>
 
-                    <label
-                      className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition ${
-                        metodeBayar === "transfer_manual"
-                          ? "border-brand-500 bg-brand-50/50"
-                          : "border-slate-200 hover:bg-slate-50"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="metode"
-                        value="transfer_manual"
-                        checked={metodeBayar === "transfer_manual"}
-                        onChange={() => setMetodeBayar("transfer_manual")}
-                        className="mt-1 text-brand-600 focus:ring-brand-500"
-                      />
-                      <div>
-                        <div className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                          <Building className="w-4 h-4 text-brand-600" /> Transfer Bank Manual
-                        </div>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                          Transfer langsung ke rekening lembaga & dikonfirmasi admin.
-                        </p>
-                      </div>
-                    </label>
-
-                    <label
-                      className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition ${
-                        metodeBayar === "mayar"
-                          ? "border-brand-500 bg-brand-50/50"
-                          : "border-slate-200 hover:bg-slate-50"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="metode"
-                        value="mayar"
-                        checked={metodeBayar === "mayar"}
-                        onChange={() => setMetodeBayar("mayar")}
-                        className="mt-1 text-brand-600 focus:ring-brand-500"
-                      />
-                      <div>
-                        <div className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                          <CreditCard className="w-4 h-4 text-brand-600" /> Mayar Payment Gateway (Instan QRIS/VA)
-                        </div>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                          Pembayaran otomatis terverifikasi instan via QRIS, Virtual Account, &amp; E-Wallet.
-                        </p>
-                      </div>
-                    </label>
-                  </div>
-                )}
-
-                <div className="flex items-center gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsModalOpen(false)}
-                    disabled={submitting}
-                    className="flex-1 py-2.5 px-4 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition"
-                  >
-                    Batal
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleKonfirmasiDaftar}
-                    disabled={submitting}
-                    className="flex-1 py-2.5 px-4 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-bold shadow-md shadow-brand-500/20 disabled:opacity-50 transition flex items-center justify-center gap-2"
-                  >
-                    {submitting ? (
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    ) : (
-                      "Setuju & Daftar"
+                  <label
+                    className={cn(
+                      "flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors",
+                      metodeBayar === "transfer_manual"
+                        ? "border-primary bg-primary/5"
+                        : "hover:bg-muted/50"
                     )}
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+                  >
+                    <input
+                      type="radio"
+                      name="metode"
+                      value="transfer_manual"
+                      checked={metodeBayar === "transfer_manual"}
+                      onChange={() => setMetodeBayar("transfer_manual")}
+                      className="mt-1 h-4 w-4 accent-primary"
+                    />
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-sm font-medium">
+                        <Building className="h-4 w-4 text-primary" />
+                        Transfer Bank Manual
+                      </div>
+                      <p className="text-xs leading-relaxed text-muted-foreground">
+                        Transfer langsung ke rekening lembaga &amp; dikonfirmasi
+                        admin.
+                      </p>
+                    </div>
+                  </label>
 
-      {/* Modal Alert */}
-      <AlertModal
-        isOpen={alertModal.isOpen}
-        onClose={() => setAlertModal((prev) => ({ ...prev, isOpen: false }))}
-        title={alertModal.title}
-        message={alertModal.message}
-        type={alertModal.type}
-      />
+                  <label
+                    className={cn(
+                      "flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors",
+                      metodeBayar === "mayar"
+                        ? "border-primary bg-primary/5"
+                        : "hover:bg-muted/50"
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name="metode"
+                      value="mayar"
+                      checked={metodeBayar === "mayar"}
+                      onChange={() => setMetodeBayar("mayar")}
+                      className="mt-1 h-4 w-4 accent-primary"
+                    />
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-sm font-medium">
+                        <CreditCard className="h-4 w-4 text-primary" />
+                        Mayar Payment Gateway (Instan QRIS/VA)
+                      </div>
+                      <p className="text-xs leading-relaxed text-muted-foreground">
+                        Pembayaran otomatis terverifikasi instan via QRIS,
+                        Virtual Account, &amp; E-Wallet.
+                      </p>
+                    </div>
+                  </label>
+                </div>
+              )}
+
+              <DialogFooter className="flex-col gap-2 sm:flex-row sm:space-x-0">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsModalOpen(false)}
+                  disabled={submitting}
+                  className="w-full sm:w-auto"
+                >
+                  Batal
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleKonfirmasiDaftar}
+                  disabled={submitting}
+                  className="w-full sm:w-auto"
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Memproses...
+                    </>
+                  ) : (
+                    "Setuju & Daftar"
+                  )}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

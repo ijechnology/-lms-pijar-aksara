@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import Link from "next/link";
 
 import {
@@ -38,18 +39,20 @@ export default function PageHeader({
             {breadcrumbs.map((item, index) => {
               const isLast = index === breadcrumbs.length - 1;
               return (
-                <BreadcrumbItem key={`${item.label}-${index}`}>
-                  {isLast ? (
-                    <BreadcrumbPage>{item.label}</BreadcrumbPage>
-                  ) : (
-                    <>
+                <Fragment key={`${item.label}-${index}`}>
+                  <BreadcrumbItem className={cn(isLast && "min-w-0")}>
+                    {isLast ? (
+                      <BreadcrumbPage className="truncate">
+                        {item.label}
+                      </BreadcrumbPage>
+                    ) : (
                       <BreadcrumbLink asChild>
                         <Link href={item.href ?? "/"}>{item.label}</Link>
                       </BreadcrumbLink>
-                      <BreadcrumbSeparator />
-                    </>
-                  )}
-                </BreadcrumbItem>
+                    )}
+                  </BreadcrumbItem>
+                  {!isLast && <BreadcrumbSeparator />}
+                </Fragment>
               );
             })}
           </BreadcrumbList>

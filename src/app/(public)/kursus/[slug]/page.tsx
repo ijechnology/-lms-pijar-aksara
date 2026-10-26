@@ -1,19 +1,27 @@
-import React from "react";
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import type { Metadata } from "next";
+import { Award, CheckCircle2, Clock, User } from "lucide-react";
+
+import PageHeader from "@/components/layout/PageHeader";
 import {
-  BookOpen,
-  Clock,
-  Users,
-  Award,
-  CheckCircle2,
-  ShieldCheck,
-  User,
-  ArrowRight,
-  AlertTriangle,
-} from "lucide-react";
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { createClient } from "@/lib/supabase/client";
+import { cn } from "@/lib/utils";
+
 import TombolDaftarKursus from "./TombolDaftarKursus";
 
 // Data cadangan modul resmi untuk render static / fallback
@@ -252,215 +260,229 @@ export default async function KursusDetailPage({
     }).format(val);
   };
 
-  return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
+  const initials = kursus.instruktur_nama
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part: string) => part[0])
+    .join("")
+    .toUpperCase();
 
-      {/* Breadcrumb Header */}
-      <div className="bg-white border-b border-slate-200 py-3.5">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="flex items-center gap-2 text-xs text-slate-500 font-medium">
-            <Link href="/" className="hover:text-brand-600 transition">
-              Beranda
-            </Link>
-            <span>/</span>
-            <Link href="/" className="hover:text-brand-600 transition">
-              Katalog
-            </Link>
-            <span>/</span>
-            <span className="text-slate-800 font-semibold truncate max-w-md">
-              {kursus.judul}
-            </span>
-          </nav>
+  const quotaBadge = isPenuh ? (
+    <Badge variant="destructive">Kuota penuh</Badge>
+  ) : isHampirPenuh ? (
+    <Badge variant="highlight">Sisa {sisaKursi} kursi</Badge>
+  ) : (
+    <Badge variant="secondary">Sisa {sisaKursi} kursi</Badge>
+  );
+
+  return (
+    <div className="bg-muted/30">
+      <div className="border-b bg-background">
+        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+          <PageHeader
+            title={kursus.judul}
+            breadcrumbs={[
+              { label: "Beranda", href: "/" },
+              { label: "Katalog", href: "/kursus" },
+              { label: kursus.judul },
+            ]}
+          />
         </div>
       </div>
 
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-          {/* Kolom Kiri: Informasi Utama Kursus & Silabus */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Header Judul */}
-            <div className="space-y-4 bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/80 shadow-sm">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-brand-50 text-brand-700 border border-brand-100">
-                  {kursus.kategori}
-                </span>
-
-                {isPenuh ? (
-                  <span className="px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800">
-                    Kuota Penuh
-                  </span>
-                ) : isHampirPenuh ? (
-                  <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 animate-pulse">
-                    Sisa {sisaKursi} Kursi!
-                  </span>
-                ) : (
-                  <span className="px-3 py-1 rounded-full text-xs font-medium text-slate-600 bg-slate-100">
-                    Sisa {sisaKursi} kursi
-                  </span>
-                )}
-              </div>
-
-              <h1 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
-                {kursus.judul}
-              </h1>
-
-              <p className="text-base sm:text-lg text-slate-600 leading-relaxed">
-                {kursus.ringkasan}
-              </p>
-
-              <div className="pt-4 border-t border-slate-100 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-brand-100 text-brand-700 font-bold flex items-center justify-center">
-                  <User className="w-5 h-5" />
+      <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-3">
+          <div className="space-y-6 lg:col-span-2">
+            <Card>
+              <CardHeader className="space-y-4 p-6 sm:p-8">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="secondary">{kursus.kategori}</Badge>
+                  {quotaBadge}
                 </div>
-                <div>
-                  <span className="text-xs text-slate-400 block font-medium">
-                    Instruktur Pengampu
-                  </span>
-                  <span className="text-sm font-bold text-slate-800">
-                    {kursus.instruktur_nama}
-                  </span>
-                </div>
-              </div>
-            </div>
 
-            {/* Deskripsi Lengkap */}
-            <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
-              <h2 className="text-xl font-bold text-slate-900">
-                Tentang Kursus Ini
-              </h2>
-              <div className="text-slate-600 text-sm sm:text-base leading-relaxed whitespace-pre-line">
-                {kursus.deskripsi}
-              </div>
-            </div>
+                <p className="text-base leading-relaxed text-muted-foreground sm:text-lg">
+                  {kursus.ringkasan}
+                </p>
 
-            {/* Silabus Kurikulum (US-01: Judul dan Durasi Modul) */}
-            <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/80 shadow-sm space-y-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-bold text-slate-900">
-                    Silabus Kurikulum
-                  </h2>
-                  <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-                    Dipelaari secara berurutan dan terarah per modul.
-                  </p>
-                </div>
-                <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700">
-                  {kursus.modul.length} Modul Pembelajaran
-                </span>
-              </div>
+                <Separator />
 
-              <div className="divide-y divide-slate-100 border border-slate-100 rounded-xl overflow-hidden">
-                {kursus.modul.map((m: any) => (
-                  <div
-                    key={m.urutan}
-                    className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-slate-50/70 transition"
-                  >
-                    <div className="flex items-center gap-3.5">
-                      <div className="w-8 h-8 rounded-lg bg-brand-50 text-brand-700 font-bold text-xs flex items-center justify-center flex-shrink-0">
-                        {m.urutan}
-                      </div>
-                      <span className="font-semibold text-slate-800 text-sm sm:text-base">
-                        {m.judul}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium whitespace-nowrap">
-                      <Clock className="w-3.5 h-3.5 text-slate-400" />
-                      <span>{m.durasi_menit} Menit</span>
-                    </div>
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-10 w-10">
+                    <AvatarFallback className="bg-primary/10 text-sm font-semibold text-primary">
+                      {initials || <User className="h-4 w-4" />}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">
+                      Instruktur Pengampu
+                    </p>
+                    <p className="text-sm font-semibold">
+                      {kursus.instruktur_nama}
+                    </p>
                   </div>
-                ))}
-              </div>
-            </div>
+                </div>
+              </CardHeader>
+            </Card>
 
-            {/* Standar Evaluasi & Sertifikat */}
-            <div className="p-6 rounded-2xl bg-gradient-to-br from-brand-900 to-slate-900 text-white space-y-4 shadow-md">
-              <div className="flex items-center gap-2 text-accent-300 font-bold text-sm">
-                <Award className="w-5 h-5" /> Standar Kelulusan & Sertifikat Resmi
-              </div>
-              <p className="text-slate-300 text-sm leading-relaxed">
-                Setiap modul dilengkapi kuis pilihan ganda dengan syarat nilai kelulusan minimal{" "}
-                <span className="text-white font-bold">{kursus.nilai_lulus}/100</span>.
-                Setelah seluruh modul selesai, sistem secara otomatis menerbitkan sertifikat digital resmi bernomor unik terverifikasi (format <code className="text-accent-300 bg-white/10 px-1 py-0.5 rounded text-xs">PA-TAHUN-NOMOR</code>).
-              </p>
-            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-xl">Tentang Kursus Ini</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground sm:text-base">
+                  {kursus.deskripsi}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-col gap-3 space-y-0 sm:flex-row sm:items-start sm:justify-between">
+                <div className="space-y-1">
+                  <CardTitle className="text-xl">Silabus Kurikulum</CardTitle>
+                  <CardDescription>
+                    Dipelaari secara berurutan dan terarah per modul.
+                  </CardDescription>
+                </div>
+                <Badge variant="secondary" className="w-fit">
+                  {kursus.modul.length} Modul Pembelajaran
+                </Badge>
+              </CardHeader>
+              <CardContent>
+                <Accordion type="single" collapsible className="w-full">
+                  {kursus.modul.map((m: any, index: number) => (
+                    <AccordionItem
+                      key={m.urutan}
+                      value={`modul-${m.urutan}`}
+                      className={index === kursus.modul.length - 1 ? "border-b-0" : ""}
+                    >
+                      <AccordionTrigger className="gap-3 py-4 hover:no-underline">
+                        <span className="flex min-w-0 flex-1 items-center gap-3 text-left">
+                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-secondary text-xs font-semibold text-secondary-foreground">
+                            {m.urutan}
+                          </span>
+                          <span className="text-sm font-medium sm:text-base">
+                            {m.judul}
+                          </span>
+                        </span>
+                      </AccordionTrigger>
+                      <AccordionContent className="pl-11 text-sm text-muted-foreground">
+                        <span className="inline-flex items-center gap-1.5">
+                          <Clock className="h-3.5 w-3.5" />
+                          {m.durasi_menit} menit
+                        </span>
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              </CardContent>
+            </Card>
+
+            <Card className="border-primary/20 bg-primary/5">
+              <CardContent className="space-y-3 p-6 sm:p-8">
+                <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+                  <Award className="h-5 w-5" />
+                  Standar Kelulusan &amp; Sertifikat Resmi
+                </div>
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  Setiap modul dilengkapi kuis pilihan ganda dengan syarat nilai
+                  kelulusan minimal{" "}
+                  <span className="font-semibold text-foreground">
+                    {kursus.nilai_lulus}/100
+                  </span>
+                  . Setelah seluruh modul selesai, sistem secara otomatis
+                  menerbitkan sertifikat digital resmi bernomor unik
+                  terverifikasi (format{" "}
+                  <code className="rounded bg-background px-1 py-0.5 text-xs text-primary">
+                    PA-TAHUN-NOMOR
+                  </code>
+                  ).
+                </p>
+              </CardContent>
+            </Card>
           </div>
 
-          {/* Kolom Kanan: Kartu Pendaftaran Sticky */}
-          <div className="lg:sticky lg:top-24 space-y-4">
-            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-lg shadow-slate-200/50 p-6 space-y-6">
-              <div>
-                <span className="text-xs uppercase font-bold tracking-wider text-slate-400 block mb-1">
+          <div className="space-y-4 lg:sticky lg:top-24">
+            <Card>
+              <CardHeader className="space-y-1 p-6">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Biaya Kursus
-                </span>
+                </p>
                 <div className="flex items-baseline gap-2">
                   <span
-                    className={`text-3xl font-extrabold ${
-                      kursus.harga === 0 ? "text-emerald-600" : "text-slate-900"
-                    }`}
+                    className={cn(
+                      "text-3xl font-semibold tracking-tight",
+                      kursus.harga === 0
+                        ? "text-emerald-700"
+                        : "text-foreground"
+                    )}
                   >
                     {formatRupiah(kursus.harga)}
                   </span>
                   {kursus.harga > 0 && (
-                    <span className="text-xs text-slate-500 font-medium">
+                    <span className="text-xs font-medium text-muted-foreground">
                       / peserta
                     </span>
                   )}
                 </div>
-              </div>
+              </CardHeader>
 
-              {/* Status Kuota */}
-              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 space-y-2">
-                <div className="flex justify-between text-xs text-slate-600 font-medium">
-                  <span>Kapasitas Kursus:</span>
-                  <span className="font-bold text-slate-800">{kursus.kuota} Kursi</span>
-                </div>
-                <div className="flex justify-between text-xs text-slate-600 font-medium">
-                  <span>Kursi Terisi:</span>
-                  <span className="font-bold text-slate-800">
-                    {kursus.kursi_terpakai} Peserta
-                  </span>
-                </div>
-                <div className="flex justify-between text-xs font-bold pt-1 border-t border-slate-200">
-                  <span className="text-slate-700">Sisa Kuota:</span>
-                  <span
-                    className={
-                      isPenuh
-                        ? "text-rose-600"
-                        : isHampirPenuh
-                        ? "text-amber-600"
-                        : "text-emerald-600"
-                    }
-                  >
-                    {isPenuh ? "Habis (Penuh)" : `${sisaKursi} Kursi Tersedia`}
-                  </span>
-                </div>
-              </div>
+              <CardContent className="space-y-4 px-6 pb-6 pt-0">
+                <Separator />
 
-              {/* Tombol Aksi Pendaftaran */}
-              <TombolDaftarKursus
-                kursusId={kursus.id}
-                slug={kursus.slug}
-                harga={kursus.harga}
-                isPenuh={isPenuh}
-              />
+                <dl className="space-y-2 text-sm">
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-muted-foreground">Kapasitas kursus</dt>
+                    <dd className="font-medium">{kursus.kuota} kursi</dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-muted-foreground">Kursi terisi</dt>
+                    <dd className="font-medium">
+                      {kursus.kursi_terpakai} peserta
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-3 border-t pt-2">
+                    <dt className="font-medium">Sisa kuota</dt>
+                    <dd
+                      className={cn(
+                        "font-semibold",
+                        isPenuh
+                          ? "text-destructive"
+                          : isHampirPenuh
+                          ? "text-amber-700"
+                          : "text-emerald-700"
+                      )}
+                    >
+                      {isPenuh ? "Habis (penuh)" : `${sisaKursi} kursi tersedia`}
+                    </dd>
+                  </div>
+                </dl>
 
-              {/* Garansi & Keunggulan */}
-              <div className="space-y-2.5 pt-4 border-t border-slate-100 text-xs text-slate-600">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                  <span>Akses materi modul terstruktur & mandiri</span>
+                <Separator />
+
+                <TombolDaftarKursus
+                  kursusId={kursus.id}
+                  slug={kursus.slug}
+                  harga={kursus.harga}
+                  isPenuh={isPenuh}
+                />
+
+                <div className="space-y-2 pt-2 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                    <span>Akses materi modul terstruktur &amp; mandiri</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                    <span>Kuis evaluasi server-side anti-bocor</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                    <span>Sertifikat digital terbit otomatis saat selesai</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                  <span>Kuis evaluasi server-side anti-bocor</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                  <span>Sertifikat digital terbit otomatis saat selesai</span>
-                </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </main>
