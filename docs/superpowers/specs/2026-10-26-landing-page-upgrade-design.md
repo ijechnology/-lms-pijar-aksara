@@ -14,7 +14,12 @@ Meningkatkan kualitas visual, keterbacaan, dan konversi pendaftaran pada landing
 2. **Preservasi Navigasi Detail Kursus**: Seluruh kartu kursus tetap dapat diklik menuju halaman detail kursus (`/kursus/[slug]`) dengan membawa status kuota *real-time*, harga/gratis, nama instruktur, dan jumlah modul.
 3. **Value Proposition Lebih Kuat**: Menggunakan kartu keunggulan ("Kenapa Belajar di Pijar Aksara?") yang aplikatif, bukan bar statistik angka statis.
 4. **Fokus Testimoni yang Tepat**: Menghilangkan persona staf administrasi; testimoni difokuskan secara kredibel pada Pelaku UMKM lokal Depok, Wirausahawan Mandiri/Freelancer, dan Pencari Kerja/Fresh Graduate.
-5. **Clean UI**: Tanpa floating fast-action button (agar tidak mengganggu tampilan di perangkat mobile maupun desktop).
+5. **Clean UI & Tanpa Floating CTA**: Tidak menggunakan floating button agar tampilan bersih dan fokus.
+6. **Konsistensi Tema & Anti-AI-Slop (Belajar dari Ruangguru & Zenius)**:
+   - **Palet Warna Selaras**: Menggunakan palet resmi sistem aplikasi: `brand` (biru indigo Pijar Aksara: 50–950), `accent` (amber/emas hangat), dan netral `slate-50` hingga `slate-900`.
+   - **Bebas AI-Slop**: Menghindari elemen generik klise (seperti gradien ungu neon acak, mesh blobs mengambang tanpa makna, ilustrasi robotik artifisial, atau buzzword berlebihan).
+   - **Tipografi & Spacing Manusiawi**: Hierarki judul yang tajam, font sans bawaan aplikasi, whitespace yang proporsional dan terstruktur rapi.
+   - **Konteks Nyata & Membumi**: Copywriting Indonesia yang natural, lugas, dan relevan dengan realitas vokasi pekerja dan UMKM di Kota Depok.
 
 ---
 
