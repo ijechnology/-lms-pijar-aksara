@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { KursusItem } from "@/components/kursus/KursusCard";
 import { createClient } from "@/lib/supabase/client";
+import type { HargaFilter } from "@/types/kursus";
 
 // Modular Landing Page Components
 import HeroSection from "@/components/landing/HeroSection";
@@ -77,7 +78,8 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("semua");
-  const [selectedPrice, setSelectedPrice] = useState("semua");
+  const [selectedPrice, setSelectedPrice] =
+    useState<HargaFilter>("semua");
 
   useEffect(() => {
     async function loadKursusFromSupabase() {
