@@ -1,4 +1,5 @@
 # Spesifikasi Desain: Redesign UI dengan Design System shadcn-style
+
 # LMS Lembaga Kursus Pijar Aksara
 
 **Tanggal:** 2026-10-27
@@ -20,17 +21,17 @@ Merombak tampilan seluruh aplikasi agar konsisten dengan bahasa visual shadcn UI
 
 ### 1.1 Keputusan yang sudah disetujui
 
-| Topik | Keputusan |
-|---|---|
-| Arah visual | Hybrid: sky/mist/amber, Inter untuk semua heading dan body, radius kecil |
-| Dark mode | Tidak ada |
-| Ikon | Lucide, termasuk komponen baru |
-| Fondasi | Tetap Tailwind v3; komponen shadcn di-port manual (Pendekatan B) |
-| Landing page | Layout dirombak dengan block shadcn; maskot interaktif dipertahankan |
-| Daftar kursus instruktur | Kartu, bukan tabel |
-| Navigasi mobile | Navbar ringkas + `Sheet`; tanpa bottom bar; tamu memakai nav atas |
-| Urutan kerja | Dua gelombang: (1) fondasi + publik/auth/peserta, (2) instruktur/admin |
-| Perubahan UX | Hanya yang tercantum di §6 dan sudah disetujui |
+| Topik                    | Keputusan                                                                |
+| ------------------------ | ------------------------------------------------------------------------ |
+| Arah visual              | Hybrid: sky/mist/amber, Inter untuk semua heading dan body, radius kecil |
+| Dark mode                | Tidak ada                                                                |
+| Ikon                     | Lucide, termasuk komponen baru                                           |
+| Fondasi                  | Tetap Tailwind v3; komponen shadcn di-port manual (Pendekatan B)         |
+| Landing page             | Layout dirombak dengan block shadcn; maskot interaktif dipertahankan     |
+| Daftar kursus instruktur | Kartu, bukan tabel                                                       |
+| Navigasi mobile          | Navbar ringkas + `Sheet`; tanpa bottom bar; tamu memakai nav atas      |
+| Urutan kerja             | Dua gelombang: (1) fondasi + publik/auth/peserta, (2) instruktur/admin   |
+| Perubahan UX             | Hanya yang tercantum di §6 dan sudah disetujui                          |
 
 ---
 
@@ -55,21 +56,21 @@ Hal berikut **tidak** dikerjakan dalam perubahan ini:
 
 Nilai disimpan sebagai CSS variable HSL di `src/app/globals.css`, lalu dipetakan di `tailwind.config.ts` dengan `hsl(var(--token))`.
 
-| Token | Nilai HSL | Peran |
-|---|---|---|
-| `--background` | `0 0% 100%` | kanvas halaman |
-| `--foreground` | `240 6% 10%` | teks utama |
-| `--card` / `--card-foreground` | `0 0% 100%` / `240 6% 10%` | permukaan kartu |
-| `--popover` / `--popover-foreground` | `0 0% 100%` / `240 6% 10%` | dropdown, tooltip |
-| `--primary` / `--primary-foreground` | `201 96% 39%` / `0 0% 100%` | aksi utama (sky-600) |
-| `--secondary` / `--secondary-foreground` | `240 5% 96%` / `240 6% 10%` | tombol sekunder (mist-100) |
-| `--muted` / `--muted-foreground` | `240 5% 96%` / `240 4% 46%` | area & teks sekunder |
-| `--accent` / `--accent-foreground` | `240 5% 96%` / `240 6% 10%` | hover/fokus item di komponen shadcn (netral) |
-| `--highlight` / `--highlight-foreground` | `48 96% 89%` / `26 83% 14%` | sorotan brand amber (badge, seal sertifikat, penanda) |
-| `--destructive` / `--destructive-foreground` | `0 72% 51%` / `0 0% 100%` | aksi destruktif |
-| `--border` / `--input` | `240 6% 90%` | garis & field |
-| `--ring` | `199 89% 48%` | fokus keyboard (sky-500) |
-| `--radius` | `0.375rem` | radius dasar (small) |
+| Token                                            | Nilai HSL                       | Peran                                                 |
+| ------------------------------------------------ | ------------------------------- | ----------------------------------------------------- |
+| `--background`                                 | `0 0% 100%`                   | kanvas halaman                                        |
+| `--foreground`                                 | `240 6% 10%`                  | teks utama                                            |
+| `--card` / `--card-foreground`               | `0 0% 100%` / `240 6% 10%`  | permukaan kartu                                       |
+| `--popover` / `--popover-foreground`         | `0 0% 100%` / `240 6% 10%`  | dropdown, tooltip                                     |
+| `--primary` / `--primary-foreground`         | `201 96% 39%` / `0 0% 100%` | aksi utama (sky-600)                                  |
+| `--secondary` / `--secondary-foreground`     | `240 5% 96%` / `240 6% 10%` | tombol sekunder (mist-100)                            |
+| `--muted` / `--muted-foreground`             | `240 5% 96%` / `240 4% 46%` | area & teks sekunder                                  |
+| `--accent` / `--accent-foreground`           | `240 5% 96%` / `240 6% 10%` | hover/fokus item di komponen shadcn (netral)          |
+| `--highlight` / `--highlight-foreground`     | `48 96% 89%` / `26 83% 14%` | sorotan brand amber (badge, seal sertifikat, penanda) |
+| `--destructive` / `--destructive-foreground` | `0 72% 51%` / `0 0% 100%`   | aksi destruktif                                       |
+| `--border` / `--input`                       | `240 6% 90%`                  | garis & field                                         |
+| `--ring`                                       | `199 89% 48%`                 | fokus keyboard (sky-500)                              |
+| `--radius`                                     | `0.375rem`                    | radius dasar (small)                                  |
 
 Turunan radius: `sm = calc(var(--radius) - 2px)`, `md = var(--radius)`, `lg = calc(var(--radius) + 2px)`.
 Warna grafik: sky-500, amber-500, emerald-500, violet-500, rose-500.
@@ -139,16 +140,17 @@ Komponen lama (`AlertModal`, `ConfirmModal`, `Pagination` kustom) tetap dipakai 
 
 Shell ditentukan oleh layout grup rute, bukan impor per halaman.
 
-| Area | Desktop | Mobile (<768px) |
-|---|---|---|
-| Publik (tamu) | Navbar penuh: logo, Kursus, FAQ, Masuk, Daftar | Navbar ringkas + `Sheet` menu |
-| Peserta | Navbar: logo, Kursus, Kursus Saya, avatar | Navbar ringkas (logo + avatar) + `Sheet` |
-| Instruktur | Navbar: logo, Katalog, Kursus Saya, avatar | Navbar ringkas (logo + avatar) + `Sheet` |
-| Admin | Sidebar 240px + konten; **tanpa topbar** | Bar ringkas 52px (menu + logo + avatar) + `Sheet` |
+| Area          | Desktop                                        | Mobile (<768px)                                     |
+| ------------- | ---------------------------------------------- | --------------------------------------------------- |
+| Publik (tamu) | Navbar penuh: logo, Kursus, FAQ, Masuk, Daftar      | Navbar ringkas + `Sheet` menu                     |
+| Peserta       | Navbar: logo, Kursus, Kursus Saya, avatar      | Navbar ringkas (logo + avatar) + `Sheet`          |
+| Instruktur    | Navbar: logo, Katalog, Kursus Saya, avatar     | Navbar ringkas (logo + avatar) + `Sheet`          |
+| Admin         | Sidebar 240px + konten; **tanpa topbar** | Bar ringkas 52px (menu + logo + avatar) + `Sheet` |
 
 ### 5.2 Navbar publik, peserta, dan instruktur
 
 Desktop (≥768px):
+
 - Tinggi 64px, `sticky top-0`, `bg-white/80 backdrop-blur`, border bawah, `z-40`.
 - Kiri: logo + wordmark menuju `/`. Tengah/kanan: tautan sesuai peran.
 - Tautan aktif: teks `primary` + garis bawah 2px; lainnya `muted-foreground`.
@@ -157,6 +159,7 @@ Desktop (≥768px):
 - Target sentuh ≥44px; `aria-current="page"` pada tautan aktif.
 
 Mobile (<768px):
+
 - Tinggi 56px, logo + tombol avatar (membuka `Sheet` kanan) atau tombol menu ikon untuk tamu.
 - `Sheet` tamu: Kursus, FAQ, Masuk, Daftar. `Sheet` pengguna: Profil, tautan panel, Keluar.
 - Tidak ada hamburger terpisah untuk pengguna yang sudah login; avatar adalah pemicunya.
@@ -173,6 +176,7 @@ Mobile (<768px):
 - Konten: `max-w-7xl`, padding 24px (mobile) / 32px (desktop).
 
 Tablet/mobile admin (<1024px):
+
 - Sidebar disembunyikan; muncul bar ringkas 52px berisi tombol menu, logo, dan avatar.
 - Tombol menu membuka `Sheet` dari kiri dengan item navigasi yang sama.
 - Avatar membuka `Sheet` akun berisi Profil dan Keluar.
@@ -199,20 +203,20 @@ Tablet/mobile admin (<1024px):
 
 ## 6. Perubahan UX yang Disetujui
 
-| Kode | Perubahan | Cakupan |
-|---|---|---|
-| U1 | Filter/tab di URL (`?q=`, `?kategori=`, `?tab=`, `?detail=`) | Publik & area role |
-| U2 | Skeleton untuk daftar/tabel | Semua halaman data |
-| U3 | Toast (sonner) untuk sukses/gagal | Semua aksi |
-| U4 | `Sheet` untuk navigasi mobile (menggantikan bottom bar) | Semua role |
-| U5 | Toggle kata sandi & validasi inline | Sudah ada; tidak dikerjakan ulang |
-| U6 | Breadcrumb | Halaman detail & panel |
-| U7 | Footer khusus landing | `/` |
-| U8 | Strip statistik di hero | `/`, jika data tersedia tanpa query mahal |
-| U9 | Shell admin dengan sidebar + URL per area | `/admin/*` |
-| U10 | Peringatan perubahan belum tersimpan | Editor kursus |
-| U11 | Detail baris di `Sheet` + `?detail=` | Tinjauan, pengguna, rekap peserta, audit |
-| U12 | `AlertDialog` untuk aksi destruktif | Semua role |
+| Kode | Perubahan                                                            | Cakupan                                     |
+| ---- | -------------------------------------------------------------------- | ------------------------------------------- |
+| U1   | Filter/tab di URL (`?q=`, `?kategori=`, `?tab=`, `?detail=`) | Publik & area role                          |
+| U2   | Skeleton untuk daftar/tabel                                          | Semua halaman data                          |
+| U3   | Toast (sonner) untuk sukses/gagal                                    | Semua aksi                                  |
+| U4   | `Sheet` untuk navigasi mobile (menggantikan bottom bar)            | Semua role                                  |
+| U5   | Toggle kata sandi & validasi inline                                  | Sudah ada; tidak dikerjakan ulang           |
+| U6   | Breadcrumb                                                           | Halaman detail & panel                      |
+| U7   | Footer khusus landing                                                | `/`                                       |
+| U8   | Strip statistik di hero                                              | `/`, jika data tersedia tanpa query mahal |
+| U9   | Shell admin dengan sidebar + URL per area                            | `/admin/*`                                |
+| U10  | Peringatan perubahan belum tersimpan                                 | Editor kursus                               |
+| U11  | Detail baris di `Sheet` + `?detail=`                             | Tinjauan, pengguna, rekap peserta, audit    |
+| U12  | `AlertDialog` untuk aksi destruktif                                | Semua role                                  |
 
 **Aturan U1:** parameter dibaca tanpa syarat login pada halaman publik; middleware dan aturan peran tidak diubah. Nilai default tidak ditulis ke URL; perubahan filter memakai `router.replace(..., { scroll: false })` agar riwayat tidak penuh.
 
@@ -239,7 +243,7 @@ Token, `cn()`, dan seluruh komponen `ui/*`. Tidak ada perubahan tampilan halaman
 - Urutan bagian: hero (dua kolom + CTA + strip statistik U8) → value proposition → katalog (toolbar filter di `Card`, grid kartu) → mentor → testimoni → FAQ (`Accordion`) → CTA → footer.
 - Aturan anti-slop dari spec landing 2026-10-26 tetap berlaku; palet `brand`/`slate` digantikan token baru.
 - Filter katalog memakai URL (U1) dan tetap berfungsi untuk tamu.
-- Strip statistik (U8) hanya menampilkan dua angka: jumlah kursus terbit dan jumlah peserta aktif. Keduanya dihitung dari satu query agregat ringan. Jika query itu tidak tersedia atau menambah beban muat halaman, bagian ini dihilangkan.
+- Strip statistik (U8) hanya menampilkan dua angka: jumlah kursus terbit dan jumlah peserta aktif. Keduanya dihitung dengan dua count `head: true` ringan yang dijalankan paralel. Jika query tidak tersedia atau menambah beban muat halaman, bagian ini dihilangkan.
 
 ### 7.4 Katalog & detail
 
@@ -289,11 +293,13 @@ Token, `cn()`, dan seluruh komponen `ui/*`. Tidak ada perubahan tampilan halaman
 ## 10. Verifikasi & Definition of Done
 
 ### 10.1 Verifikasi teknis
+
 - `npm run build` lulus.
 - `npx tsc --noEmit` lulus.
 - Tidak ada warning hidrasi baru di console.
 
 ### 10.2 Verifikasi manual per kelompok halaman
+
 - Peran: tamu, peserta, instruktur, admin.
 - Lebar: 375, 768, 1280.
 - State: kosong, loading, error, sukses.
@@ -301,23 +307,25 @@ Token, `cn()`, dan seluruh komponen `ui/*`. Tidak ada perubahan tampilan halaman
 - Screenshot sebelum/sesudah disimpan untuk review.
 
 ### 10.3 DoD Wave 1
+
 Token dan komponen dasar aktif; auth, landing, katalog, detail, dan seluruh halaman peserta memakai primitif baru; filter URL berfungsi untuk tamu; build dan tsc lulus; tidak ada regresi fungsi.
 
 ### 10.4 DoD Wave 2
+
 Daftar kursus instruktur memakai kartu; editor memenuhi U10; shell admin dan lima area berjalan; `Sheet` + `?detail=` berfungsi; aksi destruktif memakai `AlertDialog`; build dan tsc lulus.
 
 ---
 
 ## 11. Risiko & Mitigasi
 
-| Risiko | Mitigasi |
-|---|---|
-| CSS rusak seperti insiden sebelumnya | Tanpa upgrade Tailwind; verifikasi build; cek visual tiap kelompok |
-| Bentrok dengan pekerjaan bukti pembayaran yang belum di-commit | Implementasi dimulai hanya setelah pekerjaan tersebut di-commit |
-| Duplikasi komponen modal lama vs baru | Migrasi per halaman; hapus komponen lama di akhir |
-| Maskot landing berat | Pertahankan; hormati `prefers-reduced-motion`; ukur dampak |
-| Scope melebar | Hanya UX yang disetujui; fitur baru di luar scope |
-| Route admin berubah | Redirect `/admin`; tautan lama dipertahankan |
+| Risiko                                                         | Mitigasi                                                           |
+| -------------------------------------------------------------- | ------------------------------------------------------------------ |
+| CSS rusak seperti insiden sebelumnya                           | Tanpa upgrade Tailwind; verifikasi build; cek visual tiap kelompok |
+| Bentrok dengan pekerjaan bukti pembayaran yang belum di-commit | Implementasi dimulai hanya setelah pekerjaan tersebut di-commit    |
+| Duplikasi komponen modal lama vs baru                          | Migrasi per halaman; hapus komponen lama di akhir                  |
+| Maskot landing berat                                           | Pertahankan; hormati `prefers-reduced-motion`; ukur dampak       |
+| Scope melebar                                                  | Hanya UX yang disetujui; fitur baru di luar scope                  |
+| Route admin berubah                                            | Redirect `/admin`; tautan lama dipertahankan                     |
 
 ---
 
