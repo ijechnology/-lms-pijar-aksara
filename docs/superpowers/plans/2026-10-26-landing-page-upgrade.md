@@ -31,14 +31,14 @@
 **Files:**
 - Create: `src/components/landing/ValueProposition.tsx`
 
-- [ ] Buat file `src/components/landing/ValueProposition.tsx` yang memuat 4 kartu benefit utama:
+- [x] Buat file `src/components/landing/ValueProposition.tsx` yang memuat 4 kartu benefit utama:
   - Kurikulum Praktis & Aplikatif (Ikon `Target` / `Briefcase`)
   - Instruktur Praktisi Berpengalaman (Ikon `GraduationCap` / `Users`)
   - Ujian Evaluasi & Sertifikat Resmi (Ikon `Award` / `FileCheck`)
   - Kuota Terjadwal Anti-Bentrok (Ikon `Clock` / `CalendarCheck`)
-- [ ] Terapkan desain kartu bersih (`bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 hover:border-brand-300 transition`).
-- [ ] Pastikan responsif pada mobile (grid-cols-1) hingga desktop (grid-cols-2 atau grid-cols-4).
-- [ ] Verifikasi tidak ada error sintaks TypeScript.
+- [x] Terapkan desain kartu bersih (`bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 hover:border-brand-300 transition`).
+- [x] Pastikan responsif pada mobile (grid-cols-1) hingga desktop (grid-cols-2 atau grid-cols-4).
+- [x] Verifikasi tidak ada error sintaks TypeScript.
 
 ---
 
@@ -46,14 +46,14 @@
 **Files:**
 - Create: `src/components/landing/HeroSection.tsx`
 
-- [ ] Buat file `src/components/landing/HeroSection.tsx`.
-- [ ] Pasang badge *"Lembaga Kursus Resmi di Depok"* dengan border kaca lembut (`bg-white/10 backdrop-blur-md border border-white/20 text-accent-300`).
-- [ ] Buat Headline dan Subheadline yang tajam, percaya diri, dan membumi (fokus vokasi & karier praktis).
-- [ ] Sediakan 2 CTA:
+- [x] Buat file `src/components/landing/HeroSection.tsx`.
+- [x] Pasang badge *"Lembaga Kursus Resmi di Depok"* dengan border kaca lembut (`bg-white/10 backdrop-blur-md border border-white/20 text-accent-300`).
+- [x] Buat Headline dan Subheadline yang tajam, percaya diri, dan membumi (fokus vokasi & karier praktis).
+- [x] Sediakan 2 CTA:
   - Tombol Utama: *"Eksplorasi Katalog Kursus"* (smooth scroll ke elemen `#katalog`).
   - Tombol Sekunder: *"Daftar Akun"* (link ke `/register`).
-- [ ] Tambahkan checklist 3 poin keunggulan cepat dengan centang hijau (`CheckCircle2`).
-- [ ] Pastikan palet warna konsisten (`from-brand-950 via-brand-900 to-slate-900`) tanpa warna neon artifisial.
+- [x] Tambahkan checklist 3 poin keunggulan cepat dengan centang hijau (`CheckCircle2`).
+- [x] Pastikan palet warna konsisten (`from-brand-950 via-brand-900 to-slate-900`) tanpa warna neon artifisial.
 
 ---
 
@@ -61,13 +61,13 @@
 **Files:**
 - Create: `src/components/landing/MentorShowcase.tsx`
 
-- [ ] Buat file `src/components/landing/MentorShowcase.tsx`.
-- [ ] Tampilkan 3 instruktur praktisi resmi:
+- [x] Buat file `src/components/landing/MentorShowcase.tsx`.
+- [x] Tampilkan 3 instruktur praktisi resmi:
   - **Yudha Pratama** (Praktisi Akuntansi & Microsoft Excel Perkantoran)
   - **Laras Wulandari** (Kreator Konten & Desainer Canva UMKM)
   - **Michael Sitorus** (Instruktur Bahasa Inggris Komunikasi Kerja)
-- [ ] Gunakan badge keahlian, avatar inisial/foto berkelas dengan aksen brand, dan ringkasan pengalaman praktisi.
-- [ ] Berikan heading seksi yang humanis: *"Belajar Langsung dari Praktisi Berpengalaman"*.
+- [x] Gunakan badge keahlian, avatar inisial/foto berkelas dengan aksen brand, dan ringkasan pengalaman praktisi.
+- [x] Berikan heading seksi yang humanis: *"Belajar Langsung dari Praktisi Berpengalaman"*.
 
 ---
 
@@ -75,13 +75,13 @@
 **Files:**
 - Create: `src/components/landing/TestimonialSection.tsx`
 
-- [ ] Buat file `src/components/landing/TestimonialSection.tsx`.
-- [ ] Tampilkan 3 testimoni dari persona yang telah disetujui:
+- [x] Buat file `src/components/landing/TestimonialSection.tsx`.
+- [x] Tampilkan 3 testimoni dari persona yang telah disetujui:
   - **Budi Santoso** — Pemilik Usaha Kuliner Sukmajaya, Depok (kursus Pembukuan & Excel).
   - **Siti Rahmawati** — Pelaku Toko Online & Kreator Konten (kursus Desain Canva).
   - **Rizky Firmansyah** — Fresh Graduate / Pencari Kerja (kursus Bahasa Inggris Komunikasi Kerja & Excel).
-- [ ] Sertakan rating 5 bintang (`Star`), kutipan cerita nyata, dan badge lokasi/status persona.
-- [ ] Pastikan tidak ada persona staf administrasi sesuai instruksi pengguna.
+- [x] Sertakan rating 5 bintang (`Star`), kutipan cerita nyata, dan badge lokasi/status persona.
+- [x] Pastikan tidak ada persona staf administrasi sesuai instruksi pengguna.
 
 ---
 
@@ -89,14 +89,14 @@
 **Files:**
 - Create: `src/components/landing/FaqSection.tsx`
 
-- [ ] Buat file `src/components/landing/FaqSection.tsx` dengan state interaktif (`openIndex`).
-- [ ] Sediakan 4 pertanyaan esensial:
+- [x] Buat file `src/components/landing/FaqSection.tsx` dengan state interaktif (`openIndex`).
+- [x] Sediakan 4 pertanyaan esensial:
   1. *Apakah sertifikat dari LMS Pijar Aksara resmi dan terverifikasi?*
   2. *Bagaimana jika kuota kelas sudah penuh?*
   3. *Apakah materi kursus bisa diakses fleksibel?*
   4. *Metode pembayaran apa saja yang didukung? (QRIS & Virtual Account).*
-- [ ] Tambahkan ikon `ChevronDown` yang berputar (`rotate-180`) saat item aktif.
-- [ ] Pastikan teks jawaban mudah dibaca dengan warna `text-slate-600` dan background `bg-white`.
+- [x] Tambahkan ikon `ChevronDown` yang berputar (`rotate-180`) saat item aktif.
+- [x] Pastikan teks jawaban mudah dibaca dengan warna `text-slate-600` dan background `bg-white`.
 
 ---
 
@@ -104,15 +104,15 @@
 **Files:**
 - Create: `src/components/landing/CourseCatalogSection.tsx`
 
-- [ ] Buat file `src/components/landing/CourseCatalogSection.tsx` yang menerima properti:
+- [x] Buat file `src/components/landing/CourseCatalogSection.tsx` yang menerima properti:
   - `courses: KursusItem[]`
   - `searchQuery`, `onSearchChange`
   - `selectedCategory`, `onCategoryChange`, `categories`
   - `selectedPrice`, `onPriceChange`
-- [ ] Terapkan desain tab *pill chips* modern untuk kategori (`Semua`, `Administrasi`, `Bisnis & Keuangan`, dsb) yang dapat digulir horizontal di perangkat mobile.
-- [ ] Integrasikan input pencarian dengan ikon `Search` dan pembersih pencarian.
-- [ ] Render kartu kursus menggunakan `KursusCard`, memastikan tautan `/kursus/${kursus.slug}` pada judul dan tombol *"Lihat Detail"* aktif 100%.
-- [ ] Tampilkan kondisi kosong (*empty state*) yang elegan bila tidak ada kursus yang cocok beserta tombol reset filter.
+- [x] Terapkan desain tab *pill chips* modern untuk kategori (`Semua`, `Administrasi`, `Bisnis & Keuangan`, dsb) yang dapat digulir horizontal di perangkat mobile.
+- [x] Integrasikan input pencarian dengan ikon `Search` dan pembersih pencarian.
+- [x] Render kartu kursus menggunakan `KursusCard`, memastikan tautan `/kursus/${kursus.slug}` pada judul dan tombol *"Lihat Detail"* aktif 100%.
+- [x] Tampilkan kondisi kosong (*empty state*) yang elegan bila tidak ada kursus yang cocok beserta tombol reset filter.
 
 ---
 
@@ -120,8 +120,8 @@
 **Files:**
 - Modify: `src/app/page.tsx`
 
-- [ ] Impor komponen baru (`HeroSection`, `ValueProposition`, `CourseCatalogSection`, `MentorShowcase`, `TestimonialSection`, `FaqSection`).
-- [ ] Susun urutan seksi secara logis dari atas ke bawah:
+- [x] Impor komponen baru (`HeroSection`, `ValueProposition`, `CourseCatalogSection`, `MentorShowcase`, `TestimonialSection`, `FaqSection`).
+- [x] Susun urutan seksi secara logis dari atas ke bawah:
   1. `Navbar`
   2. `HeroSection`
   3. `ValueProposition`
@@ -130,8 +130,8 @@
   6. `TestimonialSection`
   7. `FaqSection`
   8. `Footer`
-- [ ] Pertahankan logika pengambilan data Supabase dan penghitungan `kursi_terpakai` secara utuh.
-- [ ] Bersihkan kode lama yang berulang atau tidak digunakan lagi.
+- [x] Pertahankan logika pengambilan data Supabase dan penghitungan `kursi_terpakai` secara utuh.
+- [x] Bersihkan kode lama yang berulang atau tidak digunakan lagi.
 
 ---
 
@@ -139,8 +139,8 @@
 **Files:**
 - Test & Verification: terminal commands & code inspections
 
-- [ ] Jalankan pengecekan tipe / build Next.js (`npm run build` atau `npx tsc --noEmit`) untuk memastikan tidak ada error kompilasi.
-- [ ] Verifikasi bahwa tautan detail kursus bekerja dengan format `/kursus/[slug]`.
-- [ ] Pastikan filter pill kategori dan pencarian bekerja secara real-time.
-- [ ] Pastikan tampilan bebas dari elemen AI-slop dan selaras dengan tema web secara keseluruhan.
-- [ ] Lakukan commit perubahan ke git.
+- [x] Jalankan pengecekan tipe / build Next.js (`npm run build` atau `npx tsc --noEmit`) untuk memastikan tidak ada error kompilasi.
+- [x] Verifikasi bahwa tautan detail kursus bekerja dengan format `/kursus/[slug]`.
+- [x] Pastikan filter pill kategori dan pencarian bekerja secara real-time.
+- [x] Pastikan tampilan bebas dari elemen AI-slop dan selaras dengan tema web secara keseluruhan.
+- [x] Lakukan commit perubahan ke git.
