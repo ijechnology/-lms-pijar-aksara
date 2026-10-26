@@ -1,8 +1,35 @@
-import React from "react";
+"use client";
+
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowRight, BookOpen, Users, Star, Award, CheckCircle2, TrendingUp } from "lucide-react";
+import { ArrowRight, BookOpen, FileSpreadsheet, Calculator, Palette, Globe } from "lucide-react";
+
+const CYCLING_PHRASES = [
+  "Belajar Keterampilan Kerja Nyata",
+  "Kurikulum Intensif Siap Pakai",
+  "Sertifikat Resmi Berstandar",
+];
 
 export default function HeroSection() {
+  const [wordIx, setWordIx] = useState(0);
+  const [wordOut, setWordOut] = useState(false);
+
+  useEffect(() => {
+    let timeoutId: number;
+    const interval = setInterval(() => {
+      setWordOut(true);
+      timeoutId = window.setTimeout(() => {
+        setWordIx((prev) => (prev + 1) % CYCLING_PHRASES.length);
+        setWordOut(false);
+      }, 400);
+    }, 3600);
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timeoutId);
+    };
+  }, []);
+
   const handleScrollToKatalog = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     const katalogEl = document.getElementById("katalog");
@@ -11,27 +38,92 @@ export default function HeroSection() {
     }
   };
 
+  const competencies = [
+    {
+      title: "Microsoft Excel Perkantoran",
+      code: "01",
+      icon: FileSpreadsheet,
+      badge: "Administrasi",
+      color: "hover:border-blue-400 group-hover:text-blue-400",
+    },
+    {
+      title: "Pembukuan Kas & Laba UMKM",
+      code: "02",
+      icon: Calculator,
+      badge: "Bisnis Keuangan",
+      color: "hover:border-emerald-400 group-hover:text-emerald-400",
+    },
+    {
+      title: "Desain Konten Promosi Canva",
+      code: "03",
+      icon: Palette,
+      badge: "Desain Grafis",
+      color: "hover:border-amber-400 group-hover:text-amber-400",
+    },
+    {
+      title: "Bahasa Inggris Komunikasi Kerja",
+      code: "04",
+      icon: Globe,
+      badge: "Bahasa Asing",
+      color: "hover:border-purple-400 group-hover:text-purple-400",
+    },
+  ];
+
   return (
-    <section className="relative overflow-hidden bg-slate-900 text-white py-16 lg:py-24 px-4 sm:px-6 lg:px-8 border-b border-slate-800">
-      {/* Background Decorative Mesh ala Zenius & Ruangguru */}
-      <div className="absolute inset-0 bg-gradient-to-br from-brand-950 via-slate-900 to-slate-950" />
-      <div className="absolute top-0 right-1/4 w-96 h-96 bg-brand-600/15 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 left-10 w-80 h-80 bg-accent-500/10 rounded-full blur-3xl pointer-events-none" />
+    <section className="relative overflow-hidden bg-slate-950 text-white py-16 lg:py-24 px-4 sm:px-6 lg:px-8 border-b border-slate-800">
+      {/* Background Geometri Garis Perspektif Editorial */}
+      <div className="absolute inset-0 pointer-events-none opacity-[0.07]">
+        <svg className="w-full h-full" viewBox="0 0 1000 1000" preserveAspectRatio="none">
+          <g stroke="currentColor" strokeWidth="1" fill="none">
+            <line x1="100" y1="100" x2="900" y2="100" />
+            <line x1="100" y1="900" x2="900" y2="900" />
+            <line x1="100" y1="100" x2="100" y2="900" />
+            <line x1="900" y1="100" x2="900" y2="900" />
+            <line x1="500" y1="100" x2="500" y2="900" />
+            <line x1="100" y1="500" x2="900" y2="500" />
+            <line x1="100" y1="100" x2="0" y2="0" />
+            <line x1="900" y1="100" x2="1000" y2="0" />
+            <line x1="100" y1="900" x2="0" y2="1000" />
+            <line x1="900" y1="900" x2="1000" y2="1000" />
+          </g>
+        </svg>
+      </div>
+
+      {/* Pendaran Cahaya Brand di Belakang */}
+      <div className="absolute top-1/4 left-10 w-96 h-96 bg-brand-600/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-10 right-10 w-96 h-96 bg-accent-500/10 rounded-full blur-3xl pointer-events-none" />
 
       <div className="max-w-7xl mx-auto relative z-10">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-10 items-center">
           
-          {/* Kolom Kiri: Copywriting & Aksi Cepat (7 Kolom) */}
+          {/* Kolom Kiri: Headline Identitas, Animasi Cycling Phrase, & Aksi Cepat (7 Kolom) */}
           <div className="lg:col-span-7 space-y-6 text-left">
-            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.15] text-white">
-              Tingkatkan Keahlian Praktis,{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent-400 via-amber-300 to-yellow-200">
-                Kuasai Keterampilan Siap Kerja
+            <div className="space-y-2">
+              <span className="text-xs uppercase tracking-widest text-slate-400 font-mono block">
+                Sistem LMS Resmi · Kota Depok
               </span>
-            </h1>
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.08] text-white">
+                <span className="block text-white">Lembaga Kursus</span>
+                <span className="block text-transparent bg-clip-text bg-gradient-to-r from-brand-300 via-brand-400 to-indigo-200">
+                  Pijar Aksara
+                </span>
+                {/* Baris Cycling Phrase dengan transisi halus blur/fade */}
+                <span className="block text-2xl sm:text-3xl lg:text-4xl font-extrabold text-accent-300 pt-2 min-h-[1.3em]">
+                  <span
+                    className={`inline-block transition-all duration-300 transform ${
+                      wordOut
+                        ? "opacity-0 blur-sm -translate-y-2"
+                        : "opacity-100 blur-0 translate-y-0"
+                    }`}
+                  >
+                    {CYCLING_PHRASES[wordIx]}
+                  </span>
+                </span>
+              </h1>
+            </div>
 
             <p className="text-base sm:text-lg text-slate-300 leading-relaxed max-w-2xl font-normal">
-              LMS resmi Lembaga Kursus Pijar Aksara Kota Depok. Pelatihan terstruktur intensif untuk staf kantor dan pelaku UMKM: Microsoft Excel, Pembukuan Kas Toko, Desain Promosi Canva, dan Bahasa Inggris Komunikasi Kerja.
+              Sistem pembelajaran online resmi untuk pelatihan vokasi dan kecakapan kerja di Kota Depok, menghubungkan materi praktis industri dengan kebutuhan dunia usaha harian.
             </p>
 
             {/* Tombol Navigasi Utama */}
@@ -52,97 +144,60 @@ export default function HeroSection() {
                 <ArrowRight className="w-4 h-4 text-slate-300" />
               </Link>
             </div>
-
-            {/* Social Proof Ringkas ala Zenius/Ruangguru */}
-            <div className="pt-6 border-t border-slate-800/80 flex flex-wrap items-center gap-6 text-xs sm:text-sm text-slate-400">
-              <div className="flex items-center gap-2">
-                <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-slate-300 font-semibold">Pendaftaran Gelombang Aktif</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Award className="w-4 h-4 text-accent-400" />
-                <span>Sertifikat Resmi Terverifikasi</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Users className="w-4 h-4 text-brand-400" />
-                <span>Lembaga Kursus Resmi Kota Depok</span>
-              </div>
-            </div>
+            {/* AREA BAWAH TOMBOL CTA BERSIH TOTAL TANPA TEKS APA PUN */}
           </div>
 
-          {/* Kolom Kanan: Card Showcase Interaktif ala Ruangguru & Zenius (5 Kolom) */}
+          {/* Kolom Kanan: Visual Kanvas Editorial Bidang Kompetensi (5 Kolom) */}
           <div className="lg:col-span-5 relative">
-            {/* Kartu Utama: Preview Kursus Nyata */}
-            <div className="bg-slate-800/90 rounded-2xl border border-slate-700/80 p-6 shadow-2xl backdrop-blur-xl space-y-5 relative">
-              {/* Header Kartu */}
-              <div className="flex items-center justify-between border-b border-slate-700 pb-4">
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-rose-500 inline-block" />
-                  <span className="w-3 h-3 rounded-full bg-amber-500 inline-block" />
-                  <span className="w-3 h-3 rounded-full bg-emerald-500 inline-block" />
-                  <span className="text-xs font-mono text-slate-400 ml-2">lms.pijaraksara.id</span>
-                </div>
-                <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  Kelas Terbit
-                </span>
-              </div>
-
-              {/* Konten Highlight */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between text-xs text-slate-400">
-                  <span>Program Pelatihan Unggulan</span>
-                  <div className="flex items-center gap-1 text-amber-400 font-bold">
-                    <Star className="w-3.5 h-3.5 fill-amber-400" /> 4.9 (Peserta Aktif)
+            <div className="bg-slate-900/90 rounded-2xl border border-slate-800 p-6 sm:p-8 backdrop-blur-md shadow-2xl relative space-y-6">
+              
+              {/* Header Visual Kanvas */}
+              <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+                <div className="space-y-0.5">
+                  <div className="text-xs font-mono uppercase tracking-wider text-slate-400">
+                    Fokus Pembelajaran
+                  </div>
+                  <div className="text-sm font-bold text-white">
+                    4 Pilar Kompetensi Siap Terap
                   </div>
                 </div>
-
-                <h3 className="text-lg font-bold text-white leading-snug">
-                  Excel untuk Administrasi Perkantoran
-                </h3>
-
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  Kuasai rumus esensial IF, VLOOKUP/XLOOKUP, Pivot Table, dan pembuatan laporan kerja harian.
-                </p>
-
-                {/* Progress Bar & Modul */}
-                <div className="bg-slate-900/60 rounded-xl p-3 border border-slate-700/60 space-y-2">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-400 font-medium">Kurikulum 3 Modul + Kuis</span>
-                    <span className="text-brand-400 font-bold">100% Praktis</span>
-                  </div>
-                  <div className="w-full bg-slate-700 rounded-full h-2 overflow-hidden">
-                    <div className="bg-gradient-to-r from-brand-500 to-accent-400 h-2 rounded-full w-4/5" />
-                  </div>
-                  <div className="flex justify-between items-center pt-1 text-[11px] text-slate-400">
-                    <span>Instruktur: <strong className="text-white">Yudha Pratama</strong></span>
-                    <span className="text-emerald-400 font-bold">Sertifikat Resmi</span>
-                  </div>
+                <div className="w-8 h-8 rounded-full border border-slate-700 bg-slate-800 flex items-center justify-center text-accent-400 text-xs font-mono font-bold">
+                  PA
                 </div>
               </div>
 
-              {/* Status Sisa Kursi Urgensi Nyata */}
-              <div className="pt-2 flex items-center justify-between bg-brand-950/40 rounded-xl p-3 border border-brand-500/30">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-accent-400" />
-                  <div>
-                    <div className="text-xs font-bold text-white">Kuota Kursi Terbatas</div>
-                    <div className="text-[11px] text-slate-400">18 dari 25 kursi terisi</div>
-                  </div>
-                </div>
-                <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-400 text-slate-950">
-                  Sisa 7 Kursi!
-                </span>
+              {/* 4 Kartu Vokasi Editorial */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {competencies.map((comp, idx) => {
+                  const IconComp = comp.icon;
+                  return (
+                    <div
+                      key={idx}
+                      className="group bg-slate-950/70 border border-slate-800/90 rounded-xl p-4 flex flex-col justify-between hover:bg-slate-800/60 transition-all duration-200"
+                    >
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between text-xs text-slate-500 font-mono">
+                          <span>{comp.code}</span>
+                          <span className="text-[10px] text-slate-400 uppercase tracking-wider">
+                            {comp.badge}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2.5">
+                          <IconComp className={`w-5 h-5 text-slate-400 transition-colors ${comp.color}`} />
+                          <h4 className="text-xs sm:text-sm font-bold text-slate-200 leading-snug">
+                            {comp.title}
+                          </h4>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            </div>
 
-            {/* Floating Glass Pill Kiri Bawah */}
-            <div className="hidden sm:flex absolute -bottom-5 -left-6 bg-slate-800/95 border border-slate-700 rounded-xl p-3 shadow-xl backdrop-blur-md items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-                <CheckCircle2 className="w-5 h-5" />
-              </div>
-              <div className="text-xs">
-                <div className="font-bold text-white">Ujian Kuis Terstandar</div>
-                <div className="text-slate-400 text-[11px]">Batas nilai lulus 70+</div>
+              {/* Stampel Kredibilitas Minimalis Bagian Bawah */}
+              <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400 font-mono">
+                <span>Kota Depok, Jawa Barat</span>
+                <span className="text-emerald-400 font-semibold">100% Bersertifikat</span>
               </div>
             </div>
           </div>
