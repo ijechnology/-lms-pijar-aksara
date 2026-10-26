@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowRight, BookOpen, FileSpreadsheet, Calculator, Palette, Globe } from "lucide-react";
+import { ArrowRight, BookOpen } from "lucide-react";
+import MascotInteractive from "./MascotInteractive";
 
 const CYCLING_PHRASES = [
   "Belajar Keterampilan Kerja Nyata",
@@ -38,68 +39,19 @@ export default function HeroSection() {
     }
   };
 
-  const competencies = [
-    {
-      title: "Microsoft Excel Perkantoran",
-      code: "01",
-      icon: FileSpreadsheet,
-      badge: "Administrasi",
-      color: "hover:border-blue-400 group-hover:text-blue-400",
-    },
-    {
-      title: "Pembukuan Kas & Laba UMKM",
-      code: "02",
-      icon: Calculator,
-      badge: "Bisnis Keuangan",
-      color: "hover:border-emerald-400 group-hover:text-emerald-400",
-    },
-    {
-      title: "Desain Konten Promosi Canva",
-      code: "03",
-      icon: Palette,
-      badge: "Desain Grafis",
-      color: "hover:border-amber-400 group-hover:text-amber-400",
-    },
-    {
-      title: "Bahasa Inggris Komunikasi Kerja",
-      code: "04",
-      icon: Globe,
-      badge: "Bahasa Asing",
-      color: "hover:border-purple-400 group-hover:text-purple-400",
-    },
-  ];
-
   return (
     <section className="relative overflow-hidden bg-slate-950 text-white py-16 lg:py-24 px-4 sm:px-6 lg:px-8 border-b border-slate-800">
-      {/* Background Geometri Garis Perspektif Editorial */}
-      <div className="absolute inset-0 pointer-events-none opacity-[0.07]">
-        <svg className="w-full h-full" viewBox="0 0 1000 1000" preserveAspectRatio="none">
-          <g stroke="currentColor" strokeWidth="1" fill="none">
-            <line x1="100" y1="100" x2="900" y2="100" />
-            <line x1="100" y1="900" x2="900" y2="900" />
-            <line x1="100" y1="100" x2="100" y2="900" />
-            <line x1="900" y1="100" x2="900" y2="900" />
-            <line x1="500" y1="100" x2="500" y2="900" />
-            <line x1="100" y1="500" x2="900" y2="500" />
-            <line x1="100" y1="100" x2="0" y2="0" />
-            <line x1="900" y1="100" x2="1000" y2="0" />
-            <line x1="100" y1="900" x2="0" y2="1000" />
-            <line x1="900" y1="900" x2="1000" y2="1000" />
-          </g>
-        </svg>
-      </div>
-
-      {/* Pendaran Cahaya Brand di Belakang */}
+      {/* Background Pendaran Cahaya Halus Selaras Tema Pijar Aksara (Tanpa Garis Grid) */}
       <div className="absolute top-1/4 left-10 w-96 h-96 bg-brand-600/15 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-10 right-10 w-96 h-96 bg-accent-500/10 rounded-full blur-3xl pointer-events-none" />
 
       <div className="max-w-7xl mx-auto relative z-10">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-10 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
           
           {/* Kolom Kiri: Headline Identitas, Animasi Cycling Phrase, & Aksi Cepat (7 Kolom) */}
           <div className="lg:col-span-7 space-y-6 text-left">
             <div className="space-y-2">
-              <span className="text-xs uppercase tracking-widest text-slate-400 font-mono block">
+              <span className="text-xs uppercase tracking-widest text-slate-400 font-semibold block">
                 Sistem LMS Resmi · Kota Depok
               </span>
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.08] text-white">
@@ -147,59 +99,9 @@ export default function HeroSection() {
             {/* AREA BAWAH TOMBOL CTA BERSIH TOTAL TANPA TEKS APA PUN */}
           </div>
 
-          {/* Kolom Kanan: Visual Kanvas Editorial Bidang Kompetensi (5 Kolom) */}
-          <div className="lg:col-span-5 relative">
-            <div className="bg-slate-900/90 rounded-2xl border border-slate-800 p-6 sm:p-8 backdrop-blur-md shadow-2xl relative space-y-6">
-              
-              {/* Header Visual Kanvas */}
-              <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-                <div className="space-y-0.5">
-                  <div className="text-xs font-mono uppercase tracking-wider text-slate-400">
-                    Fokus Pembelajaran
-                  </div>
-                  <div className="text-sm font-bold text-white">
-                    4 Pilar Kompetensi Siap Terap
-                  </div>
-                </div>
-                <div className="w-8 h-8 rounded-full border border-slate-700 bg-slate-800 flex items-center justify-center text-accent-400 text-xs font-mono font-bold">
-                  PA
-                </div>
-              </div>
-
-              {/* 4 Kartu Vokasi Editorial */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                {competencies.map((comp, idx) => {
-                  const IconComp = comp.icon;
-                  return (
-                    <div
-                      key={idx}
-                      className="group bg-slate-950/70 border border-slate-800/90 rounded-xl p-4 flex flex-col justify-between hover:bg-slate-800/60 transition-all duration-200"
-                    >
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between text-xs text-slate-500 font-mono">
-                          <span>{comp.code}</span>
-                          <span className="text-[10px] text-slate-400 uppercase tracking-wider">
-                            {comp.badge}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2.5">
-                          <IconComp className={`w-5 h-5 text-slate-400 transition-colors ${comp.color}`} />
-                          <h4 className="text-xs sm:text-sm font-bold text-slate-200 leading-snug">
-                            {comp.title}
-                          </h4>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Stampel Kredibilitas Minimalis Bagian Bawah */}
-              <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400 font-mono">
-                <span>Kota Depok, Jawa Barat</span>
-                <span className="text-emerald-400 font-semibold">100% Bersertifikat</span>
-              </div>
-            </div>
+          {/* Kolom Kanan: Maskot Pembelajar Interaktif Murni Visual Tanpa Tulisan (5 Kolom) */}
+          <div className="lg:col-span-5 flex items-center justify-center">
+            <MascotInteractive />
           </div>
 
         </div>
