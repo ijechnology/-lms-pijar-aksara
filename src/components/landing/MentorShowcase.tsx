@@ -1,5 +1,5 @@
 import React from "react";
-import { CheckCircle, Award, BookOpen } from "lucide-react";
+import { CheckCircle, BookOpen } from "lucide-react";
 
 export default function MentorShowcase() {
   const mentors = [
@@ -8,9 +8,9 @@ export default function MentorShowcase() {
       inisial: "YP",
       role: "Praktisi Akuntansi & Microsoft Excel",
       kursusDiajar: "Excel Administrasi & Pembukuan UMKM",
-      keahlian: ["Excel Formula & Pivot", "Pencatatan Arus Kas", "Laba Rugi Bisnis"],
+      keahlian: ["Formula & Pivot Table", "Pencatatan Arus Kas", "Laporan Keuangan"],
       deskripsi:
-        "Berpengalaman lebih dari 7 tahun dalam penyusunan sistem pembukuan usaha kecil serta otomatisasi laporan harian kantor.",
+        "Berpengalaman lebih dari 7 tahun dalam penyusunan sistem pembukuan usaha kecil serta otomatisasi laporan kerja harian kantor.",
       color: "from-blue-600 to-indigo-700",
     },
     {
@@ -18,7 +18,7 @@ export default function MentorShowcase() {
       inisial: "LW",
       role: "Kreator Konten & Desainer Promosi",
       kursusDiajar: "Desain Konten Promosi dengan Canva",
-      keahlian: ["Canva Visual Branding", "Poster Media Sosial", "Banner Promosi UMKM"],
+      keahlian: ["Canva Visual Branding", "Materi Media Sosial", "Banner Promosi UMKM"],
       deskripsi:
         "Fasilitator desain digital yang aktif mendampingi wirausahawan lokal dalam membuat materi promosi mandiri yang menarik dan profesional.",
       color: "from-amber-500 to-rose-600",
@@ -28,7 +28,7 @@ export default function MentorShowcase() {
       inisial: "MS",
       role: "Instruktur Komunikasi & Bahasa Inggris Bisnis",
       kursusDiajar: "Bahasa Inggris Komunikasi Kerja",
-      keahlian: ["Professional Email", "Percakapan Kerja", "Presentasi Bisnis"],
+      keahlian: ["Email Profesional", "Percakapan Kerja", "Etika Komunikasi Formal"],
       deskripsi:
         "Pengajar bahasa Inggris aplikatif dengan fokus pada rasa percaya diri bertutur dan etika komunikasi formal di lingkungan kantor modern.",
       color: "from-emerald-600 to-teal-700",
@@ -36,17 +36,15 @@ export default function MentorShowcase() {
   ];
 
   return (
-    <section className="py-16 bg-slate-50 border-b border-slate-200">
+    <section className="py-20 bg-slate-50 border-b border-slate-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+        {/* Header Tanpa Badge Pill AI-Slop */}
         <div className="text-center max-w-3xl mx-auto space-y-3">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-brand-50 text-brand-700 border border-brand-100">
-            Tim Pengajar Terpercaya
-          </div>
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
             Belajar Langsung dari Instruktur Praktisi
           </h2>
           <p className="text-base text-slate-600 leading-relaxed">
-            Materi tidak hanya sekadar teori buku, melainkan pengalaman langsung dari praktisi yang aktif di bidangnya masing-masing.
+            Materi tidak hanya sekadar teori buku, melainkan pengalaman nyata dari para profesional yang aktif di bidangnya.
           </p>
         </div>
 
@@ -54,7 +52,7 @@ export default function MentorShowcase() {
           {mentors.map((mentor, idx) => (
             <div
               key={idx}
-              className="bg-white rounded-2xl border border-slate-200/80 p-6 flex flex-col justify-between hover:border-brand-300 hover:shadow-lg hover:shadow-slate-200/60 transition-all duration-300 group"
+              className="bg-white rounded-2xl border border-slate-200/80 p-6 flex flex-col justify-between hover:border-brand-400 hover:shadow-xl hover:shadow-slate-200/60 transition-all duration-300 group"
             >
               <div className="space-y-4">
                 <div className="flex items-center gap-4">
@@ -70,7 +68,7 @@ export default function MentorShowcase() {
                       </h3>
                       <CheckCircle className="w-4 h-4 text-brand-600 fill-brand-50" />
                     </div>
-                    <p className="text-xs font-medium text-brand-600">
+                    <p className="text-xs font-semibold text-brand-600">
                       {mentor.role}
                     </p>
                   </div>

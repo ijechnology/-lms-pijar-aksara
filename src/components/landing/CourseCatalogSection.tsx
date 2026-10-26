@@ -43,17 +43,14 @@ export default function CourseCatalogSection({
   };
 
   return (
-    <section id="katalog" className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full space-y-8">
-      {/* Header Seksi */}
+    <section id="katalog" className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full space-y-8">
+      {/* Header Seksi (Tanpa Badge Pill AI-Slop) */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-200 pb-6">
-        <div>
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-brand-50 text-brand-700 border border-brand-100 mb-2">
-            Program Terpilih
-          </div>
+        <div className="space-y-1">
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
             Katalog Kursus Keterampilan Praktis
           </h2>
-          <p className="text-sm sm:text-base text-slate-500 mt-1">
+          <p className="text-sm sm:text-base text-slate-500">
             Pilih kursus intensif bersertifikat resmi sesuai kebutuhan peningkatan keahlian kerja dan bisnis Anda.
           </p>
         </div>
@@ -62,11 +59,11 @@ export default function CourseCatalogSection({
         </div>
       </div>
 
-      {/* Filter Kontrol Modern Ala EdTech */}
+      {/* Filter Kontrol Interaktif */}
       <div className="space-y-4">
         {/* Baris Pencarian & Filter Harga */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          {/* Search Box */}
+          {/* Kolom Pencarian */}
           <div className="relative flex-1 max-w-lg">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
@@ -87,7 +84,7 @@ export default function CourseCatalogSection({
             )}
           </div>
 
-          {/* Toggle Harga Cepat */}
+          {/* Toggle Harga */}
           <div className="inline-flex items-center p-1 rounded-xl bg-slate-100 border border-slate-200/80 shrink-0 self-start sm:self-auto">
             {priceOptions.map((opt) => (
               <button
@@ -106,7 +103,7 @@ export default function CourseCatalogSection({
           </div>
         </div>
 
-        {/* Pill Category Tabs (Pilihan Program Jenjang / Kategori ala Ruangguru & Zenius) */}
+        {/* Pill Category Tabs (Pilihan Program & Jalur Belajar ala Ruangguru & Zenius) */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none pt-1">
           <span className="text-xs font-semibold text-slate-400 flex items-center gap-1 shrink-0 mr-1">
             <Filter className="w-3.5 h-3.5" /> Kategori:

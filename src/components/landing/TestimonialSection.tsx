@@ -33,12 +33,10 @@ export default function TestimonialSection() {
   ];
 
   return (
-    <section className="py-16 bg-white border-b border-slate-200">
+    <section className="py-20 bg-white border-b border-slate-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+        {/* Header Tanpa Badge Pill AI-Slop */}
         <div className="text-center max-w-3xl mx-auto space-y-3">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">
-            Kisah Sukses Peserta
-          </div>
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
             Cerita Nyata dari Peserta & Pelaku Usaha
           </h2>
@@ -51,7 +49,7 @@ export default function TestimonialSection() {
           {testimonials.map((t, idx) => (
             <div
               key={idx}
-              className="bg-slate-50/70 rounded-2xl border border-slate-200/80 p-6 flex flex-col justify-between hover:bg-white hover:border-brand-300 hover:shadow-lg hover:shadow-slate-200/60 transition-all duration-300"
+              className="bg-slate-50/70 rounded-2xl border border-slate-200/80 p-6 flex flex-col justify-between hover:bg-white hover:border-brand-300 hover:shadow-xl hover:shadow-slate-200/60 transition-all duration-300"
             >
               <div className="space-y-4">
                 {/* Rating & Kutipan */}

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { ChevronDown, HelpCircle } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 export default function FaqSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(0); // Buka yang pertama secara default
@@ -34,13 +34,10 @@ export default function FaqSection() {
   };
 
   return (
-    <section className="py-16 bg-slate-50 border-b border-slate-200">
+    <section className="py-20 bg-slate-50 border-b border-slate-200">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+        {/* Header Tanpa Badge Pill AI-Slop */}
         <div className="text-center space-y-3">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-brand-50 text-brand-700 border border-brand-100">
-            <HelpCircle className="w-3.5 h-3.5" />
-            Tanya Jawab Umum
-          </div>
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
             Pertanyaan yang Sering Diajukan
           </h2>
