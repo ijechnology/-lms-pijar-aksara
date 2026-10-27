@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { createClient } from "@/lib/supabase/client";
@@ -37,7 +37,7 @@ import {
   Filter,
 } from "lucide-react";
 
-export default function InstrukturKursusPage() {
+function InstrukturKursusContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, role, isLoading } = useAuth();
@@ -386,3 +386,25 @@ export default function InstrukturKursusPage() {
     </div>
   );
 }
+
+export default function InstrukturKursusPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-background">
+          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+            <Skeleton className="h-10 w-72" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <Skeleton className="h-64 rounded-xl" />
+              <Skeleton className="h-64 rounded-xl" />
+              <Skeleton className="h-64 rounded-xl" />
+            </div>
+          </main>
+        </div>
+      }
+    >
+      <InstrukturKursusContent />
+    </Suspense>
+  );
+}
+
