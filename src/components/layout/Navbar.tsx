@@ -222,11 +222,16 @@ export default function Navbar() {
                 <DropdownMenuItem asChild>
                   <Link href="/profil">Profil</Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href={panelHref}>
-                    {role === "admin" ? "Panel Admin" : "Area Saya"}
-                  </Link>
-                </DropdownMenuItem>
+                {role === "admin" && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin/dashboard">Panel Admin</Link>
+                  </DropdownMenuItem>
+                )}
+                {role === "instruktur" && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/instruktur/kursus">Kelola Kursus</Link>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={() => void signOut()}>
                   <LogOut className="h-4 w-4" />

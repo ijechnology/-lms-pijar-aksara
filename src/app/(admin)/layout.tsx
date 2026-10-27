@@ -83,11 +83,13 @@ export default function AdminLayout({
           </Link>
         </div>
 
-        <Avatar className="h-8 w-8 border border-border">
-          <AvatarFallback className="text-xs font-bold bg-primary/10 text-primary">
-            {getInitials(profile?.nama_lengkap, user?.email)}
-          </AvatarFallback>
-        </Avatar>
+        <Link href="/profil" title="Buka profil akun">
+          <Avatar className="h-8 w-8 border border-border hover:ring-2 hover:ring-primary transition-all">
+            <AvatarFallback className="text-xs font-bold bg-primary/10 text-primary">
+              {getInitials(profile?.nama_lengkap, user?.email)}
+            </AvatarFallback>
+          </Avatar>
+        </Link>
       </header>
 
       {/* Mobile Sidebar Sheet */}

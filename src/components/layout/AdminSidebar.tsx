@@ -19,6 +19,7 @@ import {
   LogOut,
   Shield,
   GraduationCap,
+  User,
 } from "lucide-react";
 
 interface AdminSidebarProps {
@@ -167,28 +168,46 @@ export default function AdminSidebar({ onNavigate, className }: AdminSidebarProp
 
       {/* Footer Profil & Aksi Akun */}
       <div className="p-3 border-t border-border space-y-3 bg-muted/20">
-        <div className="flex items-center gap-3 px-2">
+        <Link
+          href="/profil"
+          onClick={onNavigate}
+          className="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-muted transition-colors cursor-pointer group"
+          title="Buka profil saya"
+        >
           <Avatar className="h-9 w-9 border border-border">
             <AvatarFallback className="text-xs font-bold bg-primary/10 text-primary">
               {getInitials(profile?.nama_lengkap, user?.email)}
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
-            <div className="text-xs font-semibold text-foreground truncate">
-              {profile?.nama_lengkap || "Administrator"}
+            <div className="text-xs font-semibold text-foreground truncate group-hover:text-primary transition-colors flex items-center justify-between">
+              <span>{profile?.nama_lengkap || "Administrator"}</span>
+              <User className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary" />
             </div>
             <div className="text-[11px] text-muted-foreground truncate">
               {user?.email || "admin@pijaraksara.test"}
             </div>
           </div>
-        </div>
+        </Link>
 
-        <div className="grid grid-cols-2 gap-1.5 pt-1">
+        <div className="grid grid-cols-3 gap-1.5 pt-1">
           <Button
             variant="outline"
             size="sm"
             asChild
-            className="h-8 text-xs font-medium gap-1.5 w-full justify-center"
+            className="h-8 text-xs font-medium gap-1 w-full justify-center px-1"
+          >
+            <Link href="/profil" onClick={onNavigate}>
+              <User className="h-3.5 w-3.5" />
+              <span>Profil</span>
+            </Link>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            asChild
+            className="h-8 text-xs font-medium gap-1 w-full justify-center px-1"
           >
             <Link href="/" target="_blank" rel="noopener noreferrer">
               <ExternalLink className="h-3.5 w-3.5" />
@@ -203,7 +222,7 @@ export default function AdminSidebar({ onNavigate, className }: AdminSidebarProp
               await signOut();
               window.location.href = "/masuk";
             }}
-            className="h-8 text-xs font-medium gap-1.5 w-full justify-center text-destructive hover:bg-destructive/10 hover:text-destructive"
+            className="h-8 text-xs font-medium gap-1 w-full justify-center px-1 text-destructive hover:bg-destructive/10 hover:text-destructive"
           >
             <LogOut className="h-3.5 w-3.5" />
             <span>Keluar</span>
