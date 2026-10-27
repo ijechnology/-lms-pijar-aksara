@@ -117,7 +117,6 @@ export default function ModalTambahKursus({
           ringkasan: ringkasan.trim(),
           deskripsi: deskripsi.trim(),
           harga,
-          tipe: harga === 0 ? "gratis" : "berbayar",
           kuota,
           nilai_lulus: nilaiLulus,
           status: "draf",
