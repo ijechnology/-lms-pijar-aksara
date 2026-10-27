@@ -43,7 +43,7 @@ export default function PageHeader({
                   <BreadcrumbItem
                     className={cn(
                       "min-w-0",
-                      isLast && "max-w-[60%] shrink-0",
+                      isLast && item.label.length <= 12 && "shrink-0",
                       !isLast &&
                         (index === 0 || item.label.length <= 12) &&
                         "shrink-0"
