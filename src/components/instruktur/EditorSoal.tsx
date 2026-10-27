@@ -1,10 +1,32 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { Plus, Edit2, Trash2, HelpCircle, Lock, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Plus, Edit2, Trash2, HelpCircle, AlertCircle, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import ConfirmModal from "@/components/ui/ConfirmModal";
-import AlertModal from "@/components/ui/AlertModal";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 export interface SoalData {
   id: string;
@@ -56,11 +78,13 @@ export default function EditorSoal({
         .eq("modul_id", modulId)
         .order("urutan", { ascending: true });
 
-      if (!error && data) {
+      if (error) throw error;
+      if (data) {
         setSoalList(data);
       }
     } catch (err) {
       console.error("Gagal load soal:", err);
+      toast.error("Gagal memuat soal kuis.");
     } finally {
       setLoading(false);
     }
@@ -117,6 +141,7 @@ export default function EditorSoal({
           .eq("id", editingSoal.id);
 
         if (error) throw error;
+        toast.success(`Soal nomor ${editingSoal.urutan} berhasil diperbarui.`);
       } else {
         const nextUrutan = soalList.length + 1;
         if (nextUrutan > 20) {
@@ -137,6 +162,7 @@ export default function EditorSoal({
         });
 
         if (error) throw error;
+        toast.success(`Soal nomor ${nextUrutan} berhasil ditambahkan.`);
       }
 
       setModalOpen(false);
@@ -145,23 +171,13 @@ export default function EditorSoal({
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Gagal menyimpan soal.";
       setErrorMsg(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
   };
 
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; urutan: number } | null>(null);
-  const [alertModal, setAlertModal] = useState<{
-    isOpen: boolean;
-    title: string;
-    message: string;
-    type: "info" | "error" | "success";
-  }>({
-    isOpen: false,
-    title: "",
-    message: "",
-    type: "info",
-  });
 
   const confirmDelete = (id: string, urutan: number) => {
     if (isLocked) return;
@@ -174,139 +190,140 @@ export default function EditorSoal({
     try {
       const { error } = await supabase.from("soal").delete().eq("id", deleteTarget.id);
       if (error) throw error;
+      toast.success(`Soal nomor ${deleteTarget.urutan} berhasil dihapus.`);
       setDeleteTarget(null);
       await loadSoal();
       if (onSoalCountChanged) onSoalCountChanged();
     } catch (err: unknown) {
-      setAlertModal({
-        isOpen: true,
-        title: "Gagal Menghapus Soal",
-        message: err instanceof Error ? err.message : String(err),
-        type: "error",
-      });
+      const msg = err instanceof Error ? err.message : "Gagal menghapus soal.";
+      toast.error(msg);
     }
   };
 
   const countOk = soalList.length >= 3 && soalList.length <= 20;
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-5">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+    <div className="rounded-xl border bg-card text-card-foreground p-6 space-y-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <HelpCircle className="w-5 h-5 text-brand-600" />
-            <h3 className="text-lg font-bold text-slate-900">
+            <HelpCircle className="h-5 w-5 text-primary" />
+            <h3 className="text-base font-semibold text-foreground">
               Soal Kuis: {modulJudul}
             </h3>
           </div>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-muted-foreground mt-0.5">
             Ketentuan: Minimal 3 dan maksimal 20 butir soal per modul.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          <span
-            className={`px-3 py-1 rounded-full text-xs font-bold border ${
-              countOk
-                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                : "bg-rose-50 text-rose-700 border-rose-200 animate-pulse"
-            }`}
+          <Badge
+            variant={countOk ? "default" : "destructive"}
+            className="text-xs font-medium"
           >
             {soalList.length} / 20 Soal ({countOk ? "Memenuhi syarat" : "Kurang (< 3)"})
-          </span>
+          </Badge>
 
           {!isLocked && (
-            <button
+            <Button
+              size="sm"
               onClick={openAddModal}
               disabled={soalList.length >= 20}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-sm transition disabled:opacity-50"
+              className="gap-1.5 h-8 text-xs font-medium"
             >
-              <Plus className="w-4 h-4" /> Tambah Soal
-            </button>
+              <Plus className="h-3.5 w-3.5" /> Tambah Soal
+            </Button>
           )}
         </div>
       </div>
 
       {loading ? (
-        <div className="py-8 text-center text-slate-400 text-xs">
+        <div className="py-8 text-center text-muted-foreground text-xs">
           Memuat soal kuis...
         </div>
       ) : soalList.length === 0 ? (
-        <div className="p-8 text-center border border-dashed border-slate-200 rounded-xl text-slate-500 text-xs space-y-2">
-          <HelpCircle className="w-8 h-8 text-slate-300 mx-auto" />
-          <p>Belum ada soal pada modul ini. Tambahkan minimal 3 butir soal.</p>
+        <div className="p-8 text-center border border-dashed rounded-xl text-muted-foreground text-xs space-y-2">
+          <HelpCircle className="h-8 w-8 text-muted-foreground/60 mx-auto" />
+          <p>Belum ada soal pada modul ini. Tambahkan minimal 3 butir soal pilihan ganda.</p>
         </div>
       ) : (
         <div className="space-y-3">
           {soalList.map((s) => (
             <div
               key={s.id}
-              className="p-4 rounded-xl border border-slate-200/80 hover:bg-slate-50/50 transition space-y-3"
+              className="p-4 rounded-xl border hover:bg-accent/30 transition-colors space-y-3"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-2.5">
-                  <span className="w-6 h-6 rounded-md bg-brand-100 text-brand-800 font-extrabold text-xs flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="w-6 h-6 rounded-md bg-secondary text-foreground font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
                     {s.urutan}
                   </span>
-                  <p className="text-sm font-semibold text-slate-800">
+                  <p className="text-sm font-medium text-foreground">
                     {s.pertanyaan}
                   </p>
                 </div>
 
                 {!isLocked && (
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    <button
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      size="icon"
+                      variant="ghost"
                       onClick={() => openEditModal(s)}
-                      className="p-1 rounded-md text-slate-500 hover:text-brand-600 hover:bg-slate-100"
+                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
                     >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
-                    <button
+                      <Edit2 className="h-3.5 w-3.5" />
+                      <span className="sr-only">Edit soal</span>
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
                       onClick={() => confirmDelete(s.id, s.urutan)}
-                      className="p-1 rounded-md text-slate-500 hover:text-rose-600 hover:bg-rose-50"
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                      <Trash2 className="h-3.5 w-3.5" />
+                      <span className="sr-only">Hapus soal</span>
+                    </Button>
                   </div>
                 )}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-8 text-xs">
                 <div
-                  className={`p-2 rounded-lg border ${
+                  className={`p-2.5 rounded-md border ${
                     s.kunci_jawaban === "A"
-                      ? "bg-emerald-50 border-emerald-300 text-emerald-900 font-bold"
-                      : "bg-slate-50 border-slate-200 text-slate-600"
+                      ? "bg-emerald-50 border-emerald-300 text-emerald-900 font-semibold"
+                      : "bg-muted/40 border-border text-muted-foreground"
                   }`}
                 >
-                  A: {s.pilihan_a}
+                  <span className="font-bold mr-1">A.</span> {s.pilihan_a}
                 </div>
                 <div
-                  className={`p-2 rounded-lg border ${
+                  className={`p-2.5 rounded-md border ${
                     s.kunci_jawaban === "B"
-                      ? "bg-emerald-50 border-emerald-300 text-emerald-900 font-bold"
-                      : "bg-slate-50 border-slate-200 text-slate-600"
+                      ? "bg-emerald-50 border-emerald-300 text-emerald-900 font-semibold"
+                      : "bg-muted/40 border-border text-muted-foreground"
                   }`}
                 >
-                  B: {s.pilihan_b}
+                  <span className="font-bold mr-1">B.</span> {s.pilihan_b}
                 </div>
                 <div
-                  className={`p-2 rounded-lg border ${
+                  className={`p-2.5 rounded-md border ${
                     s.kunci_jawaban === "C"
-                      ? "bg-emerald-50 border-emerald-300 text-emerald-900 font-bold"
-                      : "bg-slate-50 border-slate-200 text-slate-600"
+                      ? "bg-emerald-50 border-emerald-300 text-emerald-900 font-semibold"
+                      : "bg-muted/40 border-border text-muted-foreground"
                   }`}
                 >
-                  C: {s.pilihan_c}
+                  <span className="font-bold mr-1">C.</span> {s.pilihan_c}
                 </div>
                 <div
-                  className={`p-2 rounded-lg border ${
+                  className={`p-2.5 rounded-md border ${
                     s.kunci_jawaban === "D"
-                      ? "bg-emerald-50 border-emerald-300 text-emerald-900 font-bold"
-                      : "bg-slate-50 border-slate-200 text-slate-600"
+                      ? "bg-emerald-50 border-emerald-300 text-emerald-900 font-semibold"
+                      : "bg-muted/40 border-border text-muted-foreground"
                   }`}
                 >
-                  D: {s.pilihan_d}
+                  <span className="font-bold mr-1">D.</span> {s.pilihan_d}
                 </div>
               </div>
             </div>
@@ -315,119 +332,125 @@ export default function EditorSoal({
       )}
 
       {/* Modal Tambah / Edit Soal */}
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 sm:p-8 space-y-5 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-bold text-slate-900">
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
               {editingSoal ? `Edit Soal Nomor ${editingSoal.urutan}` : "Tambah Butir Soal Kuis"}
-            </h3>
+            </DialogTitle>
+            <DialogDescription>
+              Tuliskan pertanyaan, empat pilihan jawaban, dan tentukan kunci jawaban yang benar.
+            </DialogDescription>
+          </DialogHeader>
 
-            {errorMsg && (
-              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                <span>{errorMsg}</span>
-              </div>
-            )}
+          {errorMsg && (
+            <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-xs flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{errorMsg}</span>
+            </div>
+          )}
 
-            <form onSubmit={handleSave} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Pertanyaan
-                </label>
-                <textarea
-                  rows={3}
-                  required
-                  value={pertanyaan}
-                  onChange={(e) => setPertanyaan(e.target.value)}
-                  placeholder="Tuliskan pertanyaan kuis..."
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-brand-500"
-                />
-              </div>
+          <form onSubmit={handleSave} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="pertanyaanSoal">Pertanyaan Kuis</Label>
+              <Textarea
+                id="pertanyaanSoal"
+                rows={3}
+                required
+                value={pertanyaan}
+                onChange={(e) => setPertanyaan(e.target.value)}
+                placeholder="Tuliskan pertanyaan evaluasi..."
+              />
+            </div>
 
-              <div className="space-y-3">
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Empat Pilihan Jawaban & Tandai Kunci Jawaban Benar
-                </label>
+            <div className="space-y-3">
+              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Pilihan Jawaban & Tandai Kunci Jawaban Benar
+              </Label>
 
-                {[
-                  { key: "A", val: pilihanA, setVal: setPilihanA },
-                  { key: "B", val: pilihanB, setVal: setPilihanB },
-                  { key: "C", val: pilihanC, setVal: setPilihanC },
-                  { key: "D", val: pilihanD, setVal: setPilihanD },
-                ].map((opt) => (
-                  <div key={opt.key} className="flex items-center gap-2">
-                    <label
-                      title="Tandai sebagai Kunci Jawaban Benar"
-                      className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs cursor-pointer border transition flex-shrink-0 ${
-                        kunciJawaban === opt.key
-                          ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
-                          : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="kunci"
-                        value={opt.key}
-                        checked={kunciJawaban === opt.key}
-                        onChange={() => setKunciJawaban(opt.key)}
-                        className="sr-only"
-                      />
-                      {opt.key}
-                    </label>
+              {[
+                { key: "A", val: pilihanA, setVal: setPilihanA },
+                { key: "B", val: pilihanB, setVal: setPilihanB },
+                { key: "C", val: pilihanC, setVal: setPilihanC },
+                { key: "D", val: pilihanD, setVal: setPilihanD },
+              ].map((opt) => (
+                <div key={opt.key} className="flex items-center gap-2">
+                  <label
+                    title="Tandai sebagai Kunci Jawaban Benar"
+                    className={`w-9 h-9 rounded-md flex items-center justify-center font-bold text-xs cursor-pointer border transition-colors shrink-0 ${
+                      kunciJawaban === opt.key
+                        ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
+                        : "bg-muted text-muted-foreground border-border hover:bg-accent"
+                    }`}
+                  >
                     <input
-                      type="text"
-                      required
-                      value={opt.val}
-                      onChange={(e) => opt.setVal(e.target.value)}
-                      placeholder={`Teks Pilihan Jawaban ${opt.key}`}
-                      className="flex-1 px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-brand-500"
+                      type="radio"
+                      name="kunci"
+                      value={opt.key}
+                      checked={kunciJawaban === opt.key}
+                      onChange={() => setKunciJawaban(opt.key)}
+                      className="sr-only"
                     />
-                  </div>
-                ))}
-              </div>
+                    {opt.key}
+                  </label>
+                  <Input
+                    type="text"
+                    required
+                    value={opt.val}
+                    onChange={(e) => opt.setVal(e.target.value)}
+                    placeholder={`Pilihan Jawaban ${opt.key}`}
+                    className="flex-1"
+                  />
+                </div>
+              ))}
+            </div>
 
-              <div className="flex items-center gap-3 pt-3">
-                <button
-                  type="button"
-                  onClick={() => setModalOpen(false)}
-                  disabled={saving}
-                  className="flex-1 py-2.5 px-4 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-100"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="flex-1 py-2.5 px-4 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold shadow-sm disabled:opacity-50"
-                >
-                  {saving ? "Menyimpan..." : "Simpan Soal"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+            <DialogFooter className="pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={saving}
+                onClick={() => setModalOpen(false)}
+              >
+                Batal
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {saving ? "Menyimpan..." : "Simpan Soal"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
-      {/* Modal Konfirmasi Hapus Soal */}
-      <ConfirmModal
-        isOpen={deleteTarget !== null}
-        onClose={() => setDeleteTarget(null)}
-        onConfirm={executeDelete}
-        title="Hapus Butir Soal?"
-        message={`Apakah Anda yakin ingin menghapus butir soal kuis nomor ${deleteTarget?.urutan}? Tindakan ini tidak dapat dibatalkan.`}
-        confirmLabel="Ya, Hapus Soal"
-        cancelLabel="Batal"
-        variant="danger"
-      />
-
-      {/* Modal Notifikasi */}
-      <AlertModal
-        isOpen={alertModal.isOpen}
-        onClose={() => setAlertModal((prev) => ({ ...prev, isOpen: false }))}
-        title={alertModal.title}
-        message={alertModal.message}
-        type={alertModal.type}
-      />
+      {/* Dialog Konfirmasi Hapus Soal */}
+      <AlertDialog open={deleteTarget !== null} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-destructive flex items-center gap-2">
+              <Trash2 className="h-5 w-5" />
+              <span>Hapus Butir Soal?</span>
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2 pt-2">
+              <p>
+                Apakah Anda yakin ingin menghapus butir soal kuis nomor <strong>{deleteTarget?.urutan}</strong>?
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Tindakan ini permanen dan tidak dapat dibatalkan.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={executeDelete}
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+            >
+              Ya, Hapus Soal
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

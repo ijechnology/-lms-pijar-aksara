@@ -1,10 +1,32 @@
 "use client";
 
 import React, { useState } from "react";
-import { Plus, Edit2, Trash2, Lock, FileText, Video, Download, Upload, AlertCircle } from "lucide-react";
+import { Plus, Edit2, Trash2, Lock, FileText, Video, Download, AlertCircle, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import ConfirmModal from "@/components/ui/ConfirmModal";
-import AlertModal from "@/components/ui/AlertModal";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 export interface ModulData {
   id: string;
@@ -84,7 +106,6 @@ export default function EditorModul({
     try {
       let finalLampiranPath = lampiranPath;
 
-      // Upload file PDF ke Supabase Storage (bucket privat modul-lampiran) jika ada file baru
       if (fileToUpload) {
         if (fileToUpload.size > 10 * 1024 * 1024) {
           setErrorMsg("Ukuran file PDF maksimal 10 MB.");
@@ -92,7 +113,6 @@ export default function EditorModul({
           return;
         }
 
-        const ext = fileToUpload.name.split(".").pop();
         const cleanName = fileToUpload.name.replace(/[^a-zA-Z0-9_-]/g, "_");
         const filePath = `${kursusId}/${Date.now()}_${cleanName}`;
 
@@ -110,7 +130,6 @@ export default function EditorModul({
       }
 
       if (editingModul) {
-        // Update modul
         const { error } = await supabase
           .from("modul")
           .update({
@@ -123,8 +142,8 @@ export default function EditorModul({
           .eq("id", editingModul.id);
 
         if (error) throw error;
+        toast.success(`Modul ${editingModul.urutan} berhasil diperbarui.`);
       } else {
-        // Insert modul baru (urutan = modulList.length + 1)
         const nextUrutan = modulList.length + 1;
         if (nextUrutan > 10) {
           setErrorMsg("Maksimal 10 modul per kursus.");
@@ -143,6 +162,7 @@ export default function EditorModul({
         });
 
         if (error) throw error;
+        toast.success(`Modul ${nextUrutan} berhasil ditambahkan.`);
       }
 
       setModalOpen(false);
@@ -150,23 +170,13 @@ export default function EditorModul({
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Gagal menyimpan modul.";
       setErrorMsg(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
   };
 
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; judul: string } | null>(null);
-  const [alertModal, setAlertModal] = useState<{
-    isOpen: boolean;
-    title: string;
-    message: string;
-    type: "info" | "error" | "success";
-  }>({
-    isOpen: false,
-    title: "",
-    message: "",
-    type: "info",
-  });
 
   const confirmDelete = (id: string, judulModul: string) => {
     if (isLocked) return;
@@ -179,15 +189,12 @@ export default function EditorModul({
     try {
       const { error } = await supabase.from("modul").delete().eq("id", deleteTarget.id);
       if (error) throw error;
+      toast.success(`Modul "${deleteTarget.judul}" berhasil dihapus.`);
       setDeleteTarget(null);
       await onRefresh();
     } catch (err: unknown) {
-      setAlertModal({
-        isOpen: true,
-        title: "Gagal Menghapus Modul",
-        message: err instanceof Error ? err.message : String(err),
-        type: "error",
-      });
+      const msg = err instanceof Error ? err.message : "Gagal menghapus modul.";
+      toast.error(msg);
     }
   };
 
@@ -195,37 +202,38 @@ export default function EditorModul({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-bold text-slate-900">
+          <h3 className="text-base font-semibold text-foreground">
             Daftar Modul Kurikulum ({modulList.length} / 10)
           </h3>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-muted-foreground">
             Syarat pengajuan kursus: 2 sampai 10 modul berurutan.
           </p>
         </div>
 
         {!isLocked && (
-          <button
+          <Button
+            size="sm"
             onClick={openAddModal}
             disabled={modulList.length >= 10}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-sm transition disabled:opacity-50"
+            className="gap-1.5 h-8 text-xs font-medium"
           >
-            <Plus className="w-4 h-4" /> Tambah Modul
-          </button>
+            <Plus className="h-3.5 w-3.5" /> Tambah Modul
+          </Button>
         )}
       </div>
 
       {isLocked && (
-        <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-center gap-2">
-          <Lock className="w-4 h-4 flex-shrink-0 text-amber-600" />
+        <div className="p-3.5 rounded-md bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-center gap-2">
+          <Lock className="h-4 w-4 shrink-0 text-amber-600" />
           <span>
-            Kurikulum terkunci (mode hanya-baca) karena kursus tidak sedang berstatus Draf.
+            Kurikulum terkunci (mode hanya-baca) karena status kursus bukan Draf.
           </span>
         </div>
       )}
 
       {modulList.length === 0 ? (
-        <div className="p-8 text-center bg-white rounded-2xl border border-dashed border-slate-300 text-slate-500 text-xs space-y-2">
-          <FileText className="w-8 h-8 text-slate-400 mx-auto" />
+        <div className="p-8 text-center rounded-xl border border-dashed text-muted-foreground text-xs space-y-2">
+          <FileText className="h-8 w-8 text-muted-foreground/60 mx-auto" />
           <p>Belum ada modul kurikulum yang dibuat.</p>
         </div>
       ) : (
@@ -236,71 +244,75 @@ export default function EditorModul({
               <div
                 key={m.id}
                 onClick={() => onSelectModulForSoal(m)}
-                className={`p-4 rounded-xl border transition cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                className={`p-4 rounded-xl border transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
                   isSelected
-                    ? "bg-brand-50/80 border-brand-400 shadow-xs"
-                    : "bg-white border-slate-200/80 hover:bg-slate-50"
+                    ? "bg-secondary/70 border-primary shadow-xs"
+                    : "bg-card border-border hover:bg-accent/40"
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <div
-                    className={`w-8 h-8 rounded-lg flex items-center justify-center font-extrabold text-xs flex-shrink-0 ${
+                    className={`w-8 h-8 rounded-md flex items-center justify-center font-bold text-xs shrink-0 ${
                       isSelected
-                        ? "bg-brand-600 text-white"
-                        : "bg-slate-100 text-slate-700"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground"
                     }`}
                   >
                     {m.urutan}
                   </div>
                   <div>
-                    <h4 className="font-bold text-slate-900 text-sm">{m.judul}</h4>
-                    <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 mt-0.5">
+                    <h4 className="font-semibold text-foreground text-sm">{m.judul}</h4>
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground mt-0.5">
                       <span>{m.durasi_menit} Menit</span>
                       {m.video_url && (
-                        <span className="flex items-center gap-1 text-blue-600">
-                          <Video className="w-3.5 h-3.5" /> Ada Video
+                        <span className="flex items-center gap-1 text-sky-600">
+                          <Video className="h-3.5 w-3.5" /> Video
                         </span>
                       )}
                       {m.lampiran_path && (
                         <span className="flex items-center gap-1 text-emerald-600">
-                          <Download className="w-3.5 h-3.5" /> Ada PDF
+                          <Download className="h-3.5 w-3.5" /> PDF
                         </span>
                       )}
-                      <span className="font-semibold text-slate-700">
-                        {m.soal_count ?? 0} Butir Soal Kuis
-                      </span>
+                      <Badge variant="outline" className="font-medium text-[11px] h-5">
+                        {m.soal_count ?? 0} Soal Kuis
+                      </Badge>
                     </div>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2 self-end sm:self-center" onClick={(e) => e.stopPropagation()}>
-                  <button
+                  <Button
+                    size="sm"
+                    variant={isSelected ? "default" : "outline"}
                     onClick={() => onSelectModulForSoal(m)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
-                      isSelected
-                        ? "bg-brand-600 text-white"
-                        : "bg-slate-100 hover:bg-slate-200 text-slate-700"
-                    }`}
+                    className="h-8 text-xs font-medium"
                   >
-                    {isLocked ? "Lihat Detail" : "Lihat & Kelola"}
-                  </button>
+                    {isLocked ? "Lihat Detail" : isSelected ? "Aktif Dipilih" : "Kelola Kuis"}
+                  </Button>
 
                   {!isLocked && (
                     <>
-                      <button
+                      <Button
+                        size="icon"
+                        variant="ghost"
                         onClick={() => openEditModal(m)}
                         title="Edit Modul"
-                        className="p-1.5 rounded-lg text-slate-500 hover:text-brand-600 hover:bg-slate-100 transition"
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
                       >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
+                        <Edit2 className="h-3.5 w-3.5" />
+                        <span className="sr-only">Edit modul</span>
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
                         onClick={() => confirmDelete(m.id, m.judul)}
                         title="Hapus Modul"
-                        className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
                       >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                        <Trash2 className="h-3.5 w-3.5" />
+                        <span className="sr-only">Hapus modul</span>
+                      </Button>
                     </>
                   )}
                 </div>
@@ -311,136 +323,134 @@ export default function EditorModul({
       )}
 
       {/* Modal Tambah / Edit Modul */}
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 sm:p-8 space-y-5 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-bold text-slate-900">
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
               {editingModul ? `Edit Modul ${editingModul.urutan}` : "Tambah Modul Baru"}
-            </h3>
+            </DialogTitle>
+            <DialogDescription>
+              Lengkapi materi bacaan, durasi, dan video pembelajaran untuk modul ini.
+            </DialogDescription>
+          </DialogHeader>
 
-            {errorMsg && (
-              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                <span>{errorMsg}</span>
-              </div>
-            )}
+          {errorMsg && (
+            <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-xs flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{errorMsg}</span>
+            </div>
+          )}
 
-            <form onSubmit={handleSave} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Judul Modul
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={judul}
-                  onChange={(e) => setJudul(e.target.value)}
-                  placeholder="Misal: Format Tabel dan Rumus VLOOKUP"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-brand-500"
-                />
-              </div>
+          <form onSubmit={handleSave} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="judulModul">Judul Modul</Label>
+              <Input
+                id="judulModul"
+                required
+                value={judul}
+                onChange={(e) => setJudul(e.target.value)}
+                placeholder="Misal: Format Tabel dan Rumus VLOOKUP"
+              />
+            </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Durasi Pembelajaran (Menit)
-                </label>
-                <input
-                  type="number"
-                  min={5}
-                  max={240}
-                  required
-                  value={durasiMenit}
-                  onChange={(e) => setDurasiMenit(parseInt(e.target.value, 10))}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-brand-500"
-                />
-              </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="durasiMenit">Durasi Pembelajaran (Menit)</Label>
+              <Input
+                id="durasiMenit"
+                type="number"
+                min={5}
+                max={240}
+                required
+                value={durasiMenit}
+                onChange={(e) => setDurasiMenit(parseInt(e.target.value, 10))}
+              />
+            </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Tautan Video Pembelajaran (Opsional, YouTube https://)
-                </label>
-                <input
-                  type="url"
-                  value={videoUrl}
-                  onChange={(e) => setVideoUrl(e.target.value)}
-                  placeholder="https://www.youtube.com/watch?v=..."
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-brand-500"
-                />
-              </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="videoUrl">Tautan Video Pembelajaran (YouTube https://, Opsional)</Label>
+              <Input
+                id="videoUrl"
+                type="url"
+                value={videoUrl}
+                onChange={(e) => setVideoUrl(e.target.value)}
+                placeholder="https://www.youtube.com/watch?v=..."
+              />
+            </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Isi Materi Bacaan
-                </label>
-                <textarea
-                  rows={5}
-                  required
-                  value={isiMateri}
-                  onChange={(e) => setIsiMateri(e.target.value)}
-                  placeholder="Tuliskan materi pembelajaran modul secara lengkap di sini..."
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-brand-500 font-sans"
-                />
-              </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="isiMateri">Isi Materi Pembelajaran</Label>
+              <Textarea
+                id="isiMateri"
+                rows={5}
+                required
+                value={isiMateri}
+                onChange={(e) => setIsiMateri(e.target.value)}
+                placeholder="Tuliskan materi pembelajaran modul secara lengkap di sini..."
+              />
+            </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Berkas Lampiran PDF (Maks 10 MB, Opsional)
-                </label>
-                <input
-                  type="file"
-                  accept="application/pdf"
-                  onChange={(e) => setFileToUpload(e.target.files?.[0] || null)}
-                  className="block w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100"
-                />
-                {lampiranPath && !fileToUpload && (
-                  <p className="text-[11px] text-emerald-600 mt-1 truncate">
-                    File saat ini: {lampiranPath}
-                  </p>
-                )}
-              </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="fileLampiran">Berkas Lampiran PDF (Maks 10 MB, Opsional)</Label>
+              <Input
+                id="fileLampiran"
+                type="file"
+                accept="application/pdf"
+                onChange={(e) => setFileToUpload(e.target.files?.[0] || null)}
+                className="cursor-pointer file:font-medium file:text-xs file:bg-secondary file:border-0 file:rounded-md file:px-2 file:py-1"
+              />
+              {lampiranPath && !fileToUpload && (
+                <p className="text-[11px] text-emerald-600 truncate mt-1">
+                  File saat ini: {lampiranPath}
+                </p>
+              )}
+            </div>
 
-              <div className="flex items-center gap-3 pt-3">
-                <button
-                  type="button"
-                  onClick={() => setModalOpen(false)}
-                  disabled={saving}
-                  className="flex-1 py-2.5 px-4 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-100"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="flex-1 py-2.5 px-4 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold shadow-sm disabled:opacity-50"
-                >
-                  {saving ? "Menyimpan..." : "Simpan Modul"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+            <DialogFooter className="pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={saving}
+                onClick={() => setModalOpen(false)}
+              >
+                Batal
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {saving ? "Menyimpan..." : "Simpan Modul"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
-      {/* Modal Konfirmasi Hapus Modul */}
-      <ConfirmModal
-        isOpen={deleteTarget !== null}
-        onClose={() => setDeleteTarget(null)}
-        onConfirm={executeDelete}
-        title="Hapus Modul Kurikulum?"
-        message={`Apakah Anda yakin ingin menghapus modul "${deleteTarget?.judul}" beserta seluruh butir soal kuis di dalamnya? Tindakan ini tidak dapat dibatalkan.`}
-        confirmLabel="Ya, Hapus Modul"
-        cancelLabel="Batal"
-        variant="danger"
-      />
-
-      {/* Modal Notifikasi */}
-      <AlertModal
-        isOpen={alertModal.isOpen}
-        onClose={() => setAlertModal((prev) => ({ ...prev, isOpen: false }))}
-        title={alertModal.title}
-        message={alertModal.message}
-        type={alertModal.type}
-      />
+      {/* Dialog Konfirmasi Hapus Modul */}
+      <AlertDialog open={deleteTarget !== null} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-destructive flex items-center gap-2">
+              <Trash2 className="h-5 w-5" />
+              <span>Hapus Modul Kurikulum?</span>
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2 pt-2">
+              <p>
+                Apakah Anda yakin ingin menghapus modul <strong>&quot;{deleteTarget?.judul}&quot;</strong> beserta seluruh butir soal kuis di dalamnya?
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Tindakan ini permanen dan tidak dapat dibatalkan.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={executeDelete}
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+            >
+              Ya, Hapus Modul
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
