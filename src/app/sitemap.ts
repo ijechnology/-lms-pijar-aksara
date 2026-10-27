@@ -10,7 +10,7 @@ const FALLBACK_PUBLISHED_SLUGS = [
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://lms-pijar-aksara.netlify.app";
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://lms-pijaraksara.netlify.app";
 
   let publishedSlugs: { slug: string; updated_at?: string }[] = [];
 

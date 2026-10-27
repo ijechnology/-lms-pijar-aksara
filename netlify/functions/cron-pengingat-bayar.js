@@ -7,7 +7,7 @@ exports.config = {
 
 exports.handler = async (event, context) => {
   const cronSecret = process.env.CRON_SECRET || "pijar_aksara_cron_secret_secure_key_123";
-  const appUrl = process.env.URL || "https://lms-pijar-aksara.netlify.app";
+  const appUrl = process.env.URL || "https://lms-pijaraksara.netlify.app";
 
   console.log("[Netlify Scheduled Cron] Memulai eksekusi pengingat bayar...");
 
