@@ -3,9 +3,22 @@
 import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import Navbar from "@/components/layout/Navbar";
 import { useAuth } from "@/context/AuthContext";
 import { createClient } from "@/lib/supabase/client";
+import PageHeader from "@/components/layout/PageHeader";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import GrafikPendaftaranMingguan, {
   PendaftaranMingguanItem,
 } from "@/components/admin/GrafikPendaftaranMingguan";
@@ -25,10 +38,9 @@ import {
   CheckCircle2,
   SlidersHorizontal,
   GraduationCap,
-  Sparkles,
   BookOpen,
-  HelpCircle,
   Lightbulb,
+  X,
 } from "lucide-react";
 
 interface ModulLulusPertamaItem {
@@ -91,7 +103,7 @@ function AdminDashboardContent() {
     PenyelesaianKursusItem[]
   >([]);
 
-  // 3. DAFTAR ANALITIK RAMAH UX
+  // 3. DAFTAR ANALITIK
   const [modulLulusPertamaList, setModulLulusPertamaList] = useState<
     ModulLulusPertamaItem[]
   >([]);
@@ -410,7 +422,7 @@ function AdminDashboardContent() {
       dataLoadedRef.current = true;
       setLoading(false);
     }
-  }, [user?.id, supabase, rentang, customDari, customSampai]);
+  }, [user, supabase, rentang, customDari, customSampai]);
 
   useEffect(() => {
     if (!isLoading) {
@@ -422,7 +434,7 @@ function AdminDashboardContent() {
         loadDashboardData();
       }
     }
-  }, [user?.id, role, isLoading, router, loadDashboardData]);
+  }, [user, role, isLoading, router, loadDashboardData]);
 
   // Handler Uji Coba Cron (Tombol ringkas di header)
   const handleTriggerCronManual = async () => {
@@ -448,15 +460,13 @@ function AdminDashboardContent() {
         type: "success",
         message:
           data.message ||
-          `Scheduler cron berhasil dijalankan! ${data.sent ?? 0} email pengingat (sisa <= 3 jam) terkirim.`,
+          `Uji coba cron berhasil dijalankan: ${data.total_diproses ?? 0} tagihan diproses, ${data.email_terkirim ?? 0} email pengingat dikirim.`,
       });
-    } catch (err) {
+      loadDashboardData();
+    } catch (err: any) {
       setCronFeedback({
         type: "error",
-        message:
-          err instanceof Error
-            ? err.message
-            : "Gagal memicu cron pengingat batas bayar.",
+        message: err.message || "Terjadi kesalahan saat memicu pengujian cron.",
       });
     } finally {
       setCronLoading(false);
@@ -471,46 +481,41 @@ function AdminDashboardContent() {
     }).format(val);
   };
 
-  if (isLoading || !user || role !== "admin") {
+  if (loading && !dataLoadedRef.current) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col">
-        <Navbar />
-        <div className="flex-1 flex items-center justify-center">
-          <div className="w-8 h-8 border-3 border-brand-200 border-t-brand-600 rounded-full animate-spin" />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        <Skeleton className="h-10 w-72" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <Skeleton className="h-32 rounded-xl" />
+          <Skeleton className="h-32 rounded-xl" />
+          <Skeleton className="h-32 rounded-xl" />
+          <Skeleton className="h-32 rounded-xl" />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <Skeleton className="h-80 rounded-xl" />
+          <Skeleton className="h-80 rounded-xl" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      <Navbar />
-
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        {/* HEADER & KONTROL ATAS: Judul, 3 Filter Bersih, & Tombol Uji Cron Ringkas */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-200 pb-6">
-          <div>
-            <div className="flex items-center gap-2 text-brand-600 font-bold text-xs uppercase tracking-wider mb-1">
-              <TrendingUp className="w-4 h-4" /> Ringkasan Analitik Eksekutif
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-              Dasbor LMS Pijar Aksara
-            </h1>
-            <p className="text-slate-500 text-xs sm:text-sm mt-1">
-              Pantau pendaftaran, pendapatan mingguan, retensi kursus, dan kapasitas kursi secara real-time.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2.5 self-start lg:self-auto">
-            {/* FILTER RENTANG BERSIH: 8 Minggu | Bulan Ini | Custom */}
-            <div className="flex items-center gap-1.5 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-xs">
+    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      {/* Header & Filter Controls */}
+      <PageHeader
+        title="Dasbor Analitik Eksekutif"
+        description="Pantau volume pendaftaran, omzet pembayaran mingguan, retensi kelulusan kursus, dan ketersediaan kuota secara terpadu."
+        actions={
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Filter Rentang: 8 Minggu | Bulan Ini | Custom */}
+            <div className="inline-flex items-center rounded-lg border bg-muted/40 p-1 text-xs">
               <button
                 type="button"
                 onClick={() => handleGantiRentang("8w")}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition ${
+                className={`px-3 py-1.5 rounded-md font-semibold transition-colors ${
                   rentang === "8w" && !isCustomMode
-                    ? "bg-brand-600 text-white shadow-xs"
-                    : "text-slate-600 hover:bg-slate-100"
+                    ? "bg-background text-foreground shadow-xs"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 8 Minggu
@@ -518,10 +523,10 @@ function AdminDashboardContent() {
               <button
                 type="button"
                 onClick={() => handleGantiRentang("bulan-ini")}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition ${
+                className={`px-3 py-1.5 rounded-md font-semibold transition-colors ${
                   rentang === "bulan-ini" && !isCustomMode
-                    ? "bg-brand-600 text-white shadow-xs"
-                    : "text-slate-600 hover:bg-slate-100"
+                    ? "bg-background text-foreground shadow-xs"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 Bulan Ini
@@ -529,403 +534,397 @@ function AdminDashboardContent() {
               <button
                 type="button"
                 onClick={() => handleGantiRentang("kustom")}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition ${
+                className={`px-3 py-1.5 rounded-md font-semibold transition-colors ${
                   isCustomMode
-                    ? "bg-brand-600 text-white shadow-xs"
-                    : "text-slate-600 hover:bg-slate-100"
+                    ? "bg-background text-foreground shadow-xs"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 Custom
               </button>
             </div>
 
-            {/* TOMBOL PENGUJIAN CRON RINGKAS (Menggantikan Card Hitam Besar) */}
-            <button
-              type="button"
+            {/* Tombol Pengujian Cron */}
+            <Button
+              variant="outline"
+              size="sm"
               onClick={handleTriggerCronManual}
               disabled={cronLoading}
               title="Picu uji coba scheduler pengingat batas bayar sisa 3 jam secara manual"
-              className="px-3.5 py-2 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 hover:text-brand-600 font-bold text-xs shadow-xs transition flex items-center gap-1.5 disabled:opacity-50"
+              className="gap-1.5 text-xs font-semibold"
             >
-              <Clock className="w-3.5 h-3.5 text-brand-600" />
+              <Clock className="w-3.5 h-3.5 text-primary" />
               <span>{cronLoading ? "Mengecek..." : "Uji Cron (3 Jam)"}</span>
-            </button>
+            </Button>
           </div>
-        </div>
+        }
+      />
 
-        {/* INPUT TANGGAL CUSTOM JIKA MODE CUSTOM AKTIF */}
-        {isCustomMode && (
-          <form
-            onSubmit={handleTerapkanKustom}
-            className="bg-white p-4 rounded-2xl border border-brand-200 shadow-sm flex flex-wrap items-center gap-4 text-xs"
-          >
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-slate-700">Dari:</span>
-              <input
-                type="date"
-                required
-                value={customDari}
-                onChange={(e) => setCustomDari(e.target.value)}
-                className="px-3 py-1.5 border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-slate-700">Sampai:</span>
-              <input
-                type="date"
-                required
-                value={customSampai}
-                onChange={(e) => setCustomSampai(e.target.value)}
-                className="px-3 py-1.5 border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
-              />
-            </div>
-            <button
-              type="submit"
-              className="px-4 py-1.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-lg transition"
+      {/* Input Tanggal Custom jika mode aktif */}
+      {isCustomMode && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="p-4">
+            <form
+              onSubmit={handleTerapkanKustom}
+              className="flex flex-wrap items-center gap-4 text-xs"
             >
-              Terapkan Tanggal
-            </button>
-          </form>
-        )}
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-foreground">Dari:</span>
+                <Input
+                  type="date"
+                  required
+                  value={customDari}
+                  onChange={(e) => setCustomDari(e.target.value)}
+                  className="h-8 text-xs bg-background w-36"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-foreground">Sampai:</span>
+                <Input
+                  type="date"
+                  required
+                  value={customSampai}
+                  onChange={(e) => setCustomSampai(e.target.value)}
+                  className="h-8 text-xs bg-background w-36"
+                />
+              </div>
+              <Button type="submit" size="sm" className="h-8 text-xs">
+                Terapkan Tanggal
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      )}
 
-        {/* NOTIFIKASI HASIL TES CRON */}
-        {cronFeedback && (
-          <div
-            className={`p-4 rounded-xl text-xs font-semibold flex items-center justify-between border ${
-              cronFeedback.type === "success"
-                ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                : "bg-rose-50 text-rose-800 border-rose-200"
-            }`}
+      {/* Feedback Uji Cron */}
+      {cronFeedback && (
+        <div
+          className={`p-4 rounded-xl text-xs font-semibold flex items-center justify-between border ${
+            cronFeedback.type === "success"
+              ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+              : "bg-destructive/10 text-destructive border-destructive/20"
+          }`}
+        >
+          <span>{cronFeedback.message}</span>
+          <button
+            onClick={() => setCronFeedback(null)}
+            className="ml-4 font-bold hover:opacity-75"
+            aria-label="Tutup notifikasi"
           >
-            <span>{cronFeedback.message}</span>
-            <button
-              onClick={() => setCronFeedback(null)}
-              className="ml-4 font-bold hover:underline"
-            >
-              Tutup
-            </button>
-          </div>
-        )}
-
-        {/* 4 KARTU RINGKASAN UTAMA */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {/* 1. Pendaftaran Bulan Ini */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-brand-300 transition">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                Pendaftaran Bulan Ini
-              </span>
-              <div className="w-9 h-9 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center">
-                <Users className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="mt-3">
-              <h3 className="text-2xl font-black text-slate-900">
-                {summaryCards.pendaftaranBulanIni}
-              </h3>
-              <p className="text-[11px] text-slate-500 font-medium mt-1">
-                Pendaftar baru bulan kalender ini
-              </p>
-            </div>
-          </div>
-
-          {/* 2. Pendapatan Bulan Ini */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-emerald-300 transition">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                Pendapatan Bulan Ini
-              </span>
-              <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                <CreditCard className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="mt-3">
-              <h3 className="text-2xl font-black text-slate-900">
-                {formatRupiah(summaryCards.pendapatanBulanIni)}
-              </h3>
-              <p className="text-[11px] text-emerald-600 font-semibold mt-1 flex items-center gap-1">
-                <CheckCircle2 className="w-3 h-3" /> Transaksi lunas bulan ini
-              </p>
-            </div>
-          </div>
-
-          {/* 3. Peserta Aktif */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-indigo-300 transition">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                Peserta Aktif
-              </span>
-              <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                <GraduationCap className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="mt-3">
-              <h3 className="text-2xl font-black text-slate-900">
-                {summaryCards.pesertaAktif}
-              </h3>
-              <p className="text-[11px] text-slate-500 font-medium mt-1">
-                Sedang aktif belajar saat ini
-              </p>
-            </div>
-          </div>
-
-          {/* 4. Sertifikat Terbit */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-blue-300 transition">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                Sertifikat Terbit
-              </span>
-              <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                <Award className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="mt-3">
-              <h3 className="text-2xl font-black text-slate-900">
-                {summaryCards.sertifikatTerbit}
-              </h3>
-              <p className="text-[11px] text-blue-600 font-semibold mt-1">
-                Kelulusan resmi terverifikasi
-              </p>
-            </div>
-          </div>
+            <X className="w-4 h-4" />
+          </button>
         </div>
+      )}
 
-        {/* GRAFIK 1 & 2: Pendaftaran Mingguan & Pendapatan Mingguan */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-            <div>
-              <h3 className="font-bold text-slate-900 text-sm sm:text-base">
-                Pendaftaran per Minggu (Gratis vs Berbayar)
-              </h3>
-              <p className="text-xs text-slate-500">
-                Perbandingan volume pendaftar kursus gratis dan berbayar setiap minggu
-              </p>
+      {/* 4 Kartu Ringkasan Utama */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <Card className="hover:border-primary/40 transition-colors">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Pendaftaran Bulan Ini
+            </CardTitle>
+            <div className="w-8 h-8 rounded-lg bg-sky-500/10 text-sky-600 flex items-center justify-center">
+              <Users className="w-4 h-4" />
             </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-black text-foreground">
+              {summaryCards.pendaftaranBulanIni}
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Pendaftar baru bulan kalender ini
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:border-primary/40 transition-colors">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Pendapatan Bulan Ini
+            </CardTitle>
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+              <CreditCard className="w-4 h-4" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-black text-foreground">
+              {formatRupiah(summaryCards.pendapatanBulanIni)}
+            </div>
+            <p className="text-[11px] text-emerald-600 font-semibold mt-1 flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3" /> Transaksi lunas bulan ini
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:border-primary/40 transition-colors">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Peserta Aktif
+            </CardTitle>
+            <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-600 flex items-center justify-center">
+              <GraduationCap className="w-4 h-4" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-black text-foreground">
+              {summaryCards.pesertaAktif}
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Sedang aktif belajar saat ini
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:border-primary/40 transition-colors">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Sertifikat Terbit
+            </CardTitle>
+            <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-600 flex items-center justify-center">
+              <Award className="w-4 h-4" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-black text-foreground">
+              {summaryCards.sertifikatTerbit}
+            </div>
+            <p className="text-[11px] text-blue-600 font-semibold mt-1">
+              Kelulusan resmi terverifikasi
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Grafik 1 & 2: Pendaftaran Mingguan & Pendapatan Mingguan */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base font-bold">
+              Pendaftaran per Minggu (Gratis vs Berbayar)
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Perbandingan volume pendaftar kursus gratis dan berbayar setiap minggu
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
             <GrafikPendaftaranMingguan data={chartPendaftaranMingguan} />
-          </div>
+          </CardContent>
+        </Card>
 
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-            <div>
-              <h3 className="font-bold text-slate-900 text-sm sm:text-base">
-                Pendapatan per Minggu
-              </h3>
-              <p className="text-xs text-slate-500">
-                Tren omset dari pendaftaran aktif dan selesai yang sudah lunas dibayar
-              </p>
-            </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base font-bold">Pendapatan per Minggu</CardTitle>
+            <CardDescription className="text-xs">
+              Tren omset dari pendaftaran aktif dan selesai yang sudah lunas dibayar
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
             <GrafikPendapatanMingguan data={chartPendapatanMingguan} />
-          </div>
-        </div>
+          </CardContent>
+        </Card>
+      </div>
 
-        {/* GRAFIK 3: Tingkat Penyelesaian per Kursus */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div>
-              <h3 className="font-bold text-slate-900 text-sm sm:text-base flex items-center gap-2">
-                <BookOpen className="w-4 h-4 text-brand-600" />
-                Tingkat Penyelesaian per Kursus
-              </h3>
-              <p className="text-xs text-slate-500">
-                Rasio kelulusan: <span className="font-semibold text-slate-700">selesai &divide; (aktif + selesai) &times; 100%</span>
-              </p>
-            </div>
-            <div className="flex items-center gap-3 text-[11px] text-slate-500">
-              <span className="flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block" />
-                &ge; 75%
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded-sm bg-indigo-500 inline-block" />
-                50-74%
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded-sm bg-amber-500 inline-block" />
-                25-49%
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded-sm bg-rose-500 inline-block" />
-                &lt; 25%
-              </span>
-            </div>
+      {/* Grafik 3: Tingkat Penyelesaian per Kursus */}
+      <Card>
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <CardTitle className="text-base font-bold flex items-center gap-2">
+              <BookOpen className="w-4 h-4 text-primary" />
+              Tingkat Penyelesaian per Kursus
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Rasio kelulusan: selesai ÷ (aktif + selesai) × 100%
+            </CardDescription>
           </div>
+          <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <span className="w-2.5 h-2.5 rounded-xs bg-emerald-500 inline-block" />
+              ≥ 75%
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2.5 h-2.5 rounded-xs bg-indigo-500 inline-block" />
+              50-74%
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2.5 h-2.5 rounded-xs bg-amber-500 inline-block" />
+              25-49%
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2.5 h-2.5 rounded-xs bg-rose-500 inline-block" />
+              &lt; 25%
+            </span>
+          </div>
+        </CardHeader>
+        <CardContent>
           <GrafikPenyelesaianKursus data={chartPenyelesaianKursus} />
-        </div>
+        </CardContent>
+      </Card>
 
-        {/* DUA TABEL ANALITIK SESUAI PRD: MODUL LULUS PERTAMA TERENDAH & KURSUS HAMPIR PENUH */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-          {/* TABEL 1: Modul dengan Tingkat Lulus Percobaan Pertama Terendah */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0">
-                  <Lightbulb className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-900 text-sm">
-                    Modul Tingkat Lulus Pertama Terendah
-                  </h3>
-                  <p className="text-[11px] text-slate-500">
-                    Masukan untuk instruktur mengevaluasi materi &amp; kuis
-                  </p>
-                </div>
+      {/* Tabel 1 & 2: Modul Terendah & Kursus Hampir Penuh */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        {/* Tabel 1: Modul Tingkat Lulus Pertama Terendah */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+                <Lightbulb className="w-4 h-4" />
               </div>
-              <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 text-[10px] font-bold">
-                {modulLulusPertamaList.length} Modul
-              </span>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                    <th className="py-2.5 px-4">Modul &amp; Kursus</th>
-                    <th className="py-2.5 px-3">Instruktur</th>
-                    <th className="py-2.5 px-4 text-right">Lulus Tes Ke-1</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-xs">
-                  {loading ? (
-                    <tr>
-                      <td colSpan={3} className="py-8 text-center text-slate-400">
-                        Memuat data kelulusan modul...
-                      </td>
-                    </tr>
-                  ) : modulLulusPertamaList.length === 0 ? (
-                    <tr>
-                      <td colSpan={3} className="py-8 text-center text-slate-400">
-                        Belum ada data pengerjaan kuis pada sistem.
-                      </td>
-                    </tr>
-                  ) : (
-                    modulLulusPertamaList.map((item, idx) => (
-                      <tr key={item.modul_id} className="hover:bg-slate-50/70 transition">
-                        <td className="py-3 px-4 max-w-[200px]">
-                          <div className="font-semibold text-slate-900 truncate">
-                            <span className="text-slate-400 mr-1.5 font-bold">#{idx + 1}</span>
-                            {item.modul_judul}
-                          </div>
-                          <div className="text-[11px] text-slate-500 truncate mt-0.5">
-                            {item.kursus_judul} (Modul {item.modul_urutan})
-                          </div>
-                        </td>
-                        <td className="py-3 px-3">
-                          <span className="font-medium text-slate-700 block truncate max-w-[130px]">
-                            {item.instruktur_nama || "-"}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          <span
-                            className={`inline-block px-2 py-0.5 rounded-md text-[11px] font-black ${
-                              item.persen_lulus < 50
-                                ? "bg-rose-100 text-rose-700"
-                                : item.persen_lulus < 75
-                                ? "bg-amber-100 text-amber-700"
-                                : "bg-emerald-100 text-emerald-700"
-                            }`}
-                          >
-                            {item.persen_lulus}%
-                          </span>
-                          <span className="block text-[10px] text-slate-400 mt-0.5">
-                            {item.total_lulus_pertama}/{item.total_percobaan_pertama} lulus
-                          </span>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* TABEL 2: Kursus Hampir Penuh (Sisa Kursi ≤ 2) */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center flex-shrink-0">
-                  <AlertTriangle className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-900 text-sm">
-                    Kursus Hampir Penuh (Sisa Kursi &le; 2)
-                  </h3>
-                  <p className="text-[11px] text-slate-500">
-                    Perlu penyesuaian kuota atau pembukaan kelas baru
-                  </p>
-                </div>
+              <div>
+                <CardTitle className="text-sm font-bold">
+                  Modul Tingkat Lulus Pertama Terendah
+                </CardTitle>
+                <CardDescription className="text-[11px]">
+                  Evaluasi kuis untuk instruktur pengampu
+                </CardDescription>
               </div>
-              <span className="px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 text-[10px] font-bold">
-                {kursusHampirPenuhList.length} Kursus
-              </span>
             </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                    <th className="py-2.5 px-4">Kursus</th>
-                    <th className="py-2.5 px-3">Sisa Kursi</th>
-                    <th className="py-2.5 px-4 text-right">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-xs">
-                  {loading ? (
-                    <tr>
-                      <td colSpan={3} className="py-8 text-center text-slate-400">
-                        Memeriksa ketersediaan kursi...
-                      </td>
-                    </tr>
-                  ) : kursusHampirPenuhList.length === 0 ? (
-                    <tr>
-                      <td colSpan={3} className="py-8 text-center text-slate-500">
-                        <div className="flex flex-col items-center justify-center gap-1">
-                          <span className="text-emerald-600 font-bold">Semua Kursus Aman</span>
-                          <span className="text-[11px] text-slate-400">Tidak ada kursus terbit dengan sisa kursi &le; 2.</span>
+            <Badge variant="outline" className="text-[10px] font-bold">
+              {modulLulusPertamaList.length} Modul
+            </Badge>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs">Modul &amp; Kursus</TableHead>
+                  <TableHead className="text-xs">Instruktur</TableHead>
+                  <TableHead className="text-xs text-right">Lulus Tes Ke-1</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {modulLulusPertamaList.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="h-24 text-center text-xs text-muted-foreground">
+                      Belum ada data pengerjaan kuis pada sistem.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  modulLulusPertamaList.map((item, idx) => (
+                    <TableRow key={item.modul_id}>
+                      <TableCell className="max-w-[200px]">
+                        <div className="font-semibold text-foreground text-xs truncate">
+                          <span className="text-muted-foreground mr-1.5 font-bold">#{idx + 1}</span>
+                          {item.modul_judul}
                         </div>
-                      </td>
-                    </tr>
-                  ) : (
-                    kursusHampirPenuhList.map((item) => (
-                      <tr key={item.id} className="hover:bg-slate-50/70 transition">
-                        <td className="py-3 px-4 max-w-[200px]">
-                          <div className="font-semibold text-slate-900 truncate">
-                            {item.judul}
-                          </div>
-                          <div className="text-[11px] text-slate-500 truncate mt-0.5">
-                            {item.kursi_terpakai} dari {item.kuota} terpakai ({item.persen_keterisian}%)
-                          </div>
-                        </td>
-                        <td className="py-3 px-3">
-                          <span
-                            className={`inline-block px-2 py-0.5 rounded-md text-[11px] font-bold ${
-                              item.sisa_kursi === 0
-                                ? "bg-rose-600 text-white"
-                                : item.sisa_kursi === 1
-                                ? "bg-rose-100 text-rose-800"
-                                : "bg-amber-100 text-amber-800"
-                            }`}
-                          >
-                            {item.sisa_kursi === 0 ? "Penuh (0)" : `Sisa ${item.sisa_kursi} Kursi`}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          <Link
-                            href="/admin"
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-white border border-slate-200 hover:border-brand-500 text-slate-700 hover:text-brand-600 font-bold text-[11px] shadow-xs transition"
-                          >
-                            <SlidersHorizontal className="w-3 h-3 text-brand-600" />
+                        <div className="text-[11px] text-muted-foreground truncate mt-0.5">
+                          {item.kursus_judul} (Modul {item.modul_urutan})
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        <span className="font-medium text-foreground block truncate max-w-[130px]">
+                          {item.instruktur_nama || "-"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Badge
+                          variant={
+                            item.persen_lulus < 50
+                              ? "destructive"
+                              : item.persen_lulus < 75
+                              ? "secondary"
+                              : "default"
+                          }
+                          className="font-mono text-[11px] px-1.5 py-0"
+                        >
+                          {item.persen_lulus}%
+                        </Badge>
+                        <span className="block text-[10px] text-muted-foreground mt-0.5">
+                          {item.total_lulus_pertama}/{item.total_percobaan_pertama} lulus
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        {/* Tabel 2: Kursus Hampir Penuh (Sisa Kursi ≤ 2) */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-600 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-4 h-4" />
+              </div>
+              <div>
+                <CardTitle className="text-sm font-bold">
+                  Kursus Hampir Penuh (Sisa Kursi ≤ 2)
+                </CardTitle>
+                <CardDescription className="text-[11px]">
+                  Perlu penyesuaian kuota di tinjauan kursus
+                </CardDescription>
+              </div>
+            </div>
+            <Badge
+              variant={kursusHampirPenuhList.length > 0 ? "destructive" : "outline"}
+              className="text-[10px] font-bold"
+            >
+              {kursusHampirPenuhList.length} Kursus
+            </Badge>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs">Kursus</TableHead>
+                  <TableHead className="text-xs">Sisa Kursi</TableHead>
+                  <TableHead className="text-xs text-right">Aksi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {kursusHampirPenuhList.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="h-24 text-center">
+                      <div className="flex flex-col items-center justify-center gap-1">
+                        <span className="text-emerald-600 font-bold text-xs">Semua Kursus Aman</span>
+                        <span className="text-[11px] text-muted-foreground">
+                          Tidak ada kursus terbit dengan sisa kursi ≤ 2.
+                        </span>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  kursusHampirPenuhList.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell className="max-w-[200px]">
+                        <div className="font-semibold text-foreground text-xs truncate">
+                          {item.judul}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground truncate mt-0.5">
+                          {item.kursi_terpakai} dari {item.kuota} terpakai ({item.persen_keterisian}%)
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={item.sisa_kursi === 0 ? "destructive" : "secondary"}
+                          className="text-[11px] font-bold"
+                        >
+                          {item.sisa_kursi === 0 ? "Penuh (0)" : `Sisa ${item.sisa_kursi} Kursi`}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          asChild
+                          className="h-7 text-[11px] font-semibold gap-1 px-2.5"
+                        >
+                          <Link href="/admin/tinjauan">
+                            <SlidersHorizontal className="w-3 h-3 text-primary" />
                             <span>Ubah</span>
                           </Link>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </main>
-    </div>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+    </main>
   );
 }
 
@@ -933,8 +932,14 @@ export default function AdminDashboardPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-          <div className="w-8 h-8 border-3 border-brand-200 border-t-brand-600 rounded-full animate-spin" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+          <Skeleton className="h-10 w-72" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <Skeleton className="h-32 rounded-xl" />
+            <Skeleton className="h-32 rounded-xl" />
+            <Skeleton className="h-32 rounded-xl" />
+            <Skeleton className="h-32 rounded-xl" />
+          </div>
         </div>
       }
     >
