@@ -54,7 +54,7 @@ export default function MentorShowcase() {
   ];
 
   return (
-    <section className="border-b bg-muted/30 py-16 sm:py-20">
+    <section id="instruktur" className="scroll-mt-16 border-b bg-muted/30 py-16 sm:py-20">
       <div className="mx-auto max-w-7xl space-y-10 px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl space-y-2 text-center">
           <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">

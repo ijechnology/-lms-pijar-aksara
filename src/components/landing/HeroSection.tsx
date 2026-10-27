@@ -5,8 +5,6 @@ import Link from "next/link";
 import { ArrowRight, BookOpen } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { useLandingStats } from "@/hooks/useLandingStats";
 
 import MascotInteractive from "./MascotInteractive";
 
@@ -19,7 +17,6 @@ const CYCLING_PHRASES = [
 export default function HeroSection() {
   const [wordIx, setWordIx] = useState(0);
   const [wordOut, setWordOut] = useState(false);
-  const { kursusTerbit, pesertaAktif, available, loading } = useLandingStats();
 
   useEffect(() => {
     let timeoutId: number;
@@ -90,20 +87,6 @@ export default function HeroSection() {
               </Link>
             </Button>
           </div>
-
-          {available && !loading && (
-            <dl className="flex items-center gap-4 pt-1">
-              <div className="space-y-0.5">
-                <dt className="text-xs text-muted-foreground">Kursus terbit</dt>
-                <dd className="text-lg font-semibold">{kursusTerbit}</dd>
-              </div>
-              <Separator orientation="vertical" className="h-9" />
-              <div className="space-y-0.5">
-                <dt className="text-xs text-muted-foreground">Peserta aktif</dt>
-                <dd className="text-lg font-semibold">{pesertaAktif}</dd>
-              </div>
-            </dl>
-          )}
         </div>
 
         <div className="flex items-center justify-center lg:col-span-5">

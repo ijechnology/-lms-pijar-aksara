@@ -11,7 +11,9 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  MessageSquareQuote,
   ShieldCheck,
+  Users,
 } from "lucide-react";
 
 import { useAuth } from "@/context/AuthContext";
@@ -91,9 +93,46 @@ export default function Navbar() {
               { href: "/kursus-saya", label: "Kursus Saya", icon: GraduationCap },
             ]
           : [
-              { href: "/kursus", label: "Katalog", icon: BookOpen },
+              { href: "/#katalog", label: "Katalog", icon: BookOpen },
+              { href: "/#instruktur", label: "Instruktur", icon: Users },
+              { href: "/#testimoni", label: "Testimoni", icon: MessageSquareQuote },
               { href: "/#faq", label: "FAQ", icon: HelpCircle },
             ];
+
+  const handleNavClick = (
+    e: React.MouseEvent<HTMLAnchorElement>,
+    href: string
+  ) => {
+    if (href.includes("#")) {
+      const hash = href.split("#")[1];
+      if (pathname === "/") {
+        e.preventDefault();
+        const el = document.getElementById(hash);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth" });
+          window.history.pushState(null, "", `#${hash}`);
+        }
+      }
+    }
+  };
+
+  const handleMobileNavClick = (
+    e: React.MouseEvent<HTMLAnchorElement>,
+    href: string
+  ) => {
+    setMobileOpen(false);
+    if (href.includes("#")) {
+      const hash = href.split("#")[1];
+      if (pathname === "/") {
+        e.preventDefault();
+        const el = document.getElementById(hash);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth" });
+          window.history.pushState(null, "", `#${hash}`);
+        }
+      }
+    }
+  };
 
   const displayName = profile?.nama_lengkap || user?.email?.split("@")[0] || "Akun";
   const panelHref =
@@ -127,6 +166,7 @@ export default function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
+                onClick={(e) => handleNavClick(e, link.href)}
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "relative px-3 py-2 text-sm font-medium transition-colors hover:text-foreground",
@@ -251,7 +291,7 @@ export default function Navbar() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  onClick={() => setMobileOpen(false)}
+                  onClick={(e) => handleMobileNavClick(e, link.href)}
                   aria-current={active ? "page" : undefined}
                   className={cn(
                     "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
