@@ -139,18 +139,6 @@ export async function POST(request: NextRequest) {
               ? verifiedInvoice.link
               : undefined);
 
-          const payId = verifiedInvoice.paymentLinkId || verifiedInvoice.id || reg.mayar_invoice_id;
-          if (paymentLink && payId) {
-            try {
-              const urlObj = new URL(paymentLink);
-              if (urlObj.pathname.includes("/invoices/")) {
-                urlObj.pathname = `/select-channel/${payId}`;
-                paymentLink = urlObj.toString();
-              }
-            } catch {
-              paymentLink = paymentLink.replace(/\/invoices\/[^\/?#]+/, `/select-channel/${payId}`);
-            }
-          }
 
           if (paymentLink) {
             return NextResponse.json({
