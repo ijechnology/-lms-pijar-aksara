@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -67,6 +67,7 @@ export default function Navbar() {
   const { user, profile, role, isLoading, signOut } = useAuth();
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     setMobileOpen(false);
@@ -211,6 +212,7 @@ export default function Navbar() {
           ) : (
             <button
               type="button"
+              ref={mobileMenuButtonRef}
               onClick={() => setMobileOpen(true)}
               className="flex h-9 w-9 items-center justify-center rounded-md transition-colors hover:bg-accent"
               aria-label={user ? "Buka menu akun" : "Buka menu navigasi"}
@@ -230,7 +232,14 @@ export default function Navbar() {
       </div>
 
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetContent side="right" className="w-[86vw] max-w-sm">
+        <SheetContent
+          side="right"
+          className="w-[86vw] max-w-sm"
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            mobileMenuButtonRef.current?.focus();
+          }}
+        >
           <SheetHeader>
             <SheetTitle>Menu</SheetTitle>
           </SheetHeader>
