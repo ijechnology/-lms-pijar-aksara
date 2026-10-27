@@ -1,16 +1,22 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
-import SertifikatView, { SertifikatData } from "@/components/peserta/SertifikatView";
+import { AlertCircle, ArrowLeft } from "lucide-react";
+
+import SertifikatView, {
+  SertifikatData,
+} from "@/components/peserta/SertifikatView";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/context/AuthContext";
 import { createClient } from "@/lib/supabase/client";
-import { Award, AlertCircle, ArrowLeft, RefreshCw } from "lucide-react";
 
 export default function SertifikatPage() {
   const params = useParams();
-  const router = useRouter();
   const { user, role, isLoading } = useAuth();
   const supabase = createClient();
 
@@ -40,13 +46,17 @@ export default function SertifikatPage() {
         }
 
         if (pend.peserta_id !== user.id && role !== "admin") {
-          setErrorMsg("Akses ditolak: Anda tidak berwenang melihat sertifikat ini.");
+          setErrorMsg(
+            "Akses ditolak: Anda tidak berwenang melihat sertifikat ini."
+          );
           setLoading(false);
           return;
         }
 
         if (pend.status !== "selesai") {
-          setErrorMsg("Sertifikat belum tersedia karena kursus ini belum berstatus selesai.");
+          setErrorMsg(
+            "Sertifikat belum tersedia karena kursus ini belum berstatus selesai."
+          );
           setLoading(false);
           return;
         }
@@ -62,7 +72,8 @@ export default function SertifikatPage() {
           // Fallback data jika belum ter-generate
           setSertifikat({
             nomor_sertifikat: "PA-2026-0001",
-            nama_peserta: user.user_metadata?.nama_lengkap || "Peserta Kursus",
+            nama_peserta:
+              user.user_metadata?.nama_lengkap || "Peserta Kursus",
             judul_kursus: (pend.kursus as any)?.judul || "Kursus Pijar Aksara",
             diterbitkan_pada: new Date().toISOString(),
             tahun: 2026,
@@ -80,7 +91,8 @@ export default function SertifikatPage() {
           });
         }
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : "Terjadi kesalahan.";
+        const msg =
+          err instanceof Error ? err.message : "Terjadi kesalahan.";
         setErrorMsg(msg);
       } finally {
         setLoading(false);
@@ -91,28 +103,39 @@ export default function SertifikatPage() {
   }, [user, role, pendaftaranId, supabase]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 print:bg-white print:min-h-0 print:block print:p-0 print:m-0">
-      <div className="no-print">
-      </div>
-
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10 print:p-0 print:m-0 print:max-w-none print:w-full print:block">
+    <div className="min-h-screen bg-muted/30 print:m-0 print:min-h-0 print:bg-white print:p-0">
+      <main className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8 print:m-0 print:block print:w-full print:max-w-none print:p-0">
         {loading || isLoading ? (
-          <div className="py-24 text-center text-slate-400 space-y-3">
-            <RefreshCw className="w-8 h-8 animate-spin mx-auto text-brand-600" />
-            <p className="text-sm">Memuat dokumen sertifikat resmi...</p>
-          </div>
+          <Card className="mx-auto max-w-5xl" aria-busy="true">
+            <span className="sr-only">Memuat dokumen sertifikat resmi...</span>
+            <CardContent className="space-y-4 p-6">
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-10 w-10 rounded-lg" />
+                <div className="space-y-2">
+                  <Skeleton className="h-5 w-40" />
+                  <Skeleton className="h-4 w-56" />
+                </div>
+              </div>
+              <Skeleton className="h-10 w-full max-w-md" />
+              <Skeleton className="h-[280px] w-full sm:h-[420px]" />
+            </CardContent>
+          </Card>
         ) : errorMsg ? (
-          <div className="bg-white rounded-2xl border border-rose-200 p-8 max-w-md mx-auto text-center space-y-4">
-            <AlertCircle className="w-10 h-10 text-rose-600 mx-auto" />
-            <h3 className="font-bold text-slate-900 text-lg">Sertifikat Belum Terbit</h3>
-            <p className="text-xs text-slate-600 leading-relaxed">{errorMsg}</p>
-            <Link
-              href="/kursus-saya"
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand-600 text-white text-xs font-bold"
-            >
-              <ArrowLeft className="w-4 h-4" /> Kembali ke Kursus Saya
-            </Link>
-          </div>
+          <Card className="mx-auto max-w-md">
+            <CardContent className="space-y-4 p-6">
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Sertifikat Belum Terbit</AlertTitle>
+                <AlertDescription>{errorMsg}</AlertDescription>
+              </Alert>
+              <Button asChild variant="outline" className="w-full">
+                <Link href="/kursus-saya">
+                  <ArrowLeft className="h-4 w-4" />
+                  Kembali ke Kursus Saya
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
         ) : sertifikat ? (
           <SertifikatView
             sertifikat={sertifikat}

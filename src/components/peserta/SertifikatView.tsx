@@ -4,6 +4,8 @@ import React from "react";
 import Link from "next/link";
 import { Printer, ArrowLeft } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
+
 export interface SertifikatData {
   nomor_sertifikat: string;
   nama_peserta: string;
@@ -35,26 +37,20 @@ export default function SertifikatView({
   return (
     <div className="space-y-5 print:space-y-0 print:m-0 print:p-0">
       {/* Action Toolbar (Disembunyikan saat mencetak) */}
-      <div className="no-print flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/90 shadow-sm">
+      <div className="no-print flex flex-col gap-3 rounded-lg border bg-card p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-5">
         {pendaftaranId ? (
-          <Link
-            href={`/kursus-saya`}
-            className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-600 hover:text-brand-600 transition"
-          >
-            <ArrowLeft className="w-4 h-4" /> Kembali ke Kursus Saya
-          </Link>
+          <Button asChild variant="ghost" className="justify-start">
+            <Link href="/kursus-saya">
+              <ArrowLeft className="h-4 w-4" /> Kembali ke Kursus Saya
+            </Link>
+          </Button>
         ) : (
           <div />
         )}
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handlePrint}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-brand-500/20 transition cursor-pointer"
-          >
-            <Printer className="w-4 h-4" /> Cetak / Unduh PDF Resmi
-          </button>
-        </div>
+        <Button type="button" onClick={handlePrint} className="w-full sm:w-auto">
+          <Printer className="h-4 w-4" /> Cetak / Unduh PDF Resmi
+        </Button>
       </div>
 
 
